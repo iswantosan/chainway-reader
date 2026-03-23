@@ -14,45 +14,6 @@
         android:padding="16dp">
 
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:paddingBottom="12dp">
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-
-                <ImageView
-                    android:id="@+id/imgAppLogo"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:contentDescription="@string/app_name"
-                    android:src="@drawable/ic_app_logo"
-                    android:paddingEnd="12dp"/>
-
-                <TextView
-                    android:id="@+id/titleApp"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/app_name"
-                    android:textSize="22sp"
-                    android:textStyle="bold"/>
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/textVersion"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textSize="12sp"
-                android:textColor="?android:attr/textColorSecondary"/>
-        </LinearLayout>
-
-        <LinearLayout
             android:id="@+id/sectionScan"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -79,10 +40,12 @@
                 android:layout_marginBottom="8dp"/>
 
             <LinearLayout
+                android:id="@+id/rowLastScan"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:gravity="center_vertical"
+                android:visibility="gone">
 
                 <TextView
                     android:id="@+id/textLastScan"
@@ -110,6 +73,70 @@
                     android:text="@string/btn_clear"/>
             </LinearLayout>
         </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/mode_title"
+            android:textStyle="bold"
+            android:layout_marginBottom="6dp"/>
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/toggleStockMode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:singleSelection="true"
+            app:selectionRequired="true">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnModeMasuk"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:maxLines="2"
+                android:ellipsize="none"
+                android:textAllCaps="false"
+                android:gravity="center"
+                android:text="@string/mode_masuk"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnModeKeluar"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:maxLines="2"
+                android:ellipsize="none"
+                android:textAllCaps="false"
+                android:gravity="center"
+                android:text="@string/mode_keluar"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnModeOpname"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:maxLines="2"
+                android:ellipsize="none"
+                android:textAllCaps="false"
+                android:gravity="center"
+                android:text="@string/mode_opname"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnModeReadonly"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:maxLines="2"
+                android:ellipsize="none"
+                android:textAllCaps="false"
+                android:gravity="center"
+                android:text="@string/mode_readonly"/>
+        </com.google.android.material.button.MaterialButtonToggleGroup>
 
         <TextView
             android:layout_width="wrap_content"
@@ -151,7 +178,15 @@
                 android:text="@string/btn_clear_queue"/>
         </LinearLayout>
 
-        <!-- wrap_content: tinggi tetap (320dp) memotong baris status item terakhir kalau antrean panjang -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnOpnameCompare"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone"
+            android:text="@string/btn_opname_compare"/>
+
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerPending"
             android:layout_width="match_parent"
@@ -163,95 +198,47 @@
             android:layout_marginBottom="12dp"/>
 
         <LinearLayout
+            android:id="@+id/sectionLog"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:layout_marginBottom="8dp">
+            android:orientation="vertical">
 
-            <Button
-                android:id="@+id/btnClear"
-                android:layout_width="0dp"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/btn_clear"
-                android:layout_marginEnd="8dp"/>
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
 
-            <Button
-                android:id="@+id/btnSettings"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/btn_settings"
-                android:layout_marginStart="8dp"/>
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/log_debug_title"
+                    android:textStyle="bold"/>
+
+                <Button
+                    android:id="@+id/btnSendLog"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_send_log"/>
+
+                <Button
+                    android:id="@+id/btnCopyLog"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_copy_log"/>
+            </LinearLayout>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerLog"
+                android:layout_width="match_parent"
+                android:layout_height="160dp"
+                android:nestedScrollingEnabled="false"
+                android:focusable="false"
+                android:focusableInTouchMode="false"/>
         </LinearLayout>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/status_label"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp"/>
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="12dp">
-
-            <ProgressBar
-                android:id="@+id/progressStatus"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:visibility="gone"
-                android:indeterminate="true"
-                android:layout_marginEnd="8dp"/>
-
-            <TextView
-                android:id="@+id/textStatus"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:minHeight="40dp"
-                android:padding="8dp"
-                android:text="-"/>
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="8dp">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/log_debug_title"
-                android:textStyle="bold"/>
-
-            <Button
-                android:id="@+id/btnSendLog"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/btn_send_log"/>
-
-            <Button
-                android:id="@+id/btnCopyLog"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/btn_copy_log"/>
-        </LinearLayout>
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recyclerLog"
-            android:layout_width="match_parent"
-            android:layout_height="160dp"
-            android:nestedScrollingEnabled="false"
-            android:focusable="false"
-            android:focusableInTouchMode="false"/>
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

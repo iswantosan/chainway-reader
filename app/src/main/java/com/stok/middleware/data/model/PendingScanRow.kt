@@ -16,6 +16,7 @@ data class PendingScanRow(
     val createdAt: String,
     val value: String,
     val mode: ScanMode,
+    val stockOpMode: StockOpMode = StockOpMode.MASUK,
     val state: PendingScanState = PendingScanState.PENDING,
     val serverMessage: String? = null
 ) {

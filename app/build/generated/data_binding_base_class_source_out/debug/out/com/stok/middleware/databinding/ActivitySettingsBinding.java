@@ -34,6 +34,9 @@ public final class ActivitySettingsBinding implements ViewBinding {
   public final TextInputEditText editEndpointPath;
 
   @NonNull
+  public final TextInputEditText editOpnameComparePath;
+
+  @NonNull
   public final TextInputEditText editRfidExtraKey;
 
   @NonNull
@@ -47,14 +50,15 @@ public final class ActivitySettingsBinding implements ViewBinding {
 
   private ActivitySettingsBinding(@NonNull ScrollView rootView, @NonNull Button btnSave,
       @NonNull Button btnTestConnection, @NonNull TextInputEditText editBaseUrl,
-      @NonNull TextInputEditText editEndpointPath, @NonNull TextInputEditText editRfidExtraKey,
-      @NonNull TextInputEditText editRfidIntentAction, @NonNull TextInputEditText editStaticToken,
-      @NonNull ProgressBar progressConnection) {
+      @NonNull TextInputEditText editEndpointPath, @NonNull TextInputEditText editOpnameComparePath,
+      @NonNull TextInputEditText editRfidExtraKey, @NonNull TextInputEditText editRfidIntentAction,
+      @NonNull TextInputEditText editStaticToken, @NonNull ProgressBar progressConnection) {
     this.rootView = rootView;
     this.btnSave = btnSave;
     this.btnTestConnection = btnTestConnection;
     this.editBaseUrl = editBaseUrl;
     this.editEndpointPath = editEndpointPath;
+    this.editOpnameComparePath = editOpnameComparePath;
     this.editRfidExtraKey = editRfidExtraKey;
     this.editRfidIntentAction = editRfidIntentAction;
     this.editStaticToken = editStaticToken;
@@ -112,6 +116,12 @@ public final class ActivitySettingsBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.editOpnameComparePath;
+      TextInputEditText editOpnameComparePath = ViewBindings.findChildViewById(rootView, id);
+      if (editOpnameComparePath == null) {
+        break missingId;
+      }
+
       id = R.id.editRfidExtraKey;
       TextInputEditText editRfidExtraKey = ViewBindings.findChildViewById(rootView, id);
       if (editRfidExtraKey == null) {
@@ -137,8 +147,8 @@ public final class ActivitySettingsBinding implements ViewBinding {
       }
 
       return new ActivitySettingsBinding((ScrollView) rootView, btnSave, btnTestConnection,
-          editBaseUrl, editEndpointPath, editRfidExtraKey, editRfidIntentAction, editStaticToken,
-          progressConnection);
+          editBaseUrl, editEndpointPath, editOpnameComparePath, editRfidExtraKey,
+          editRfidIntentAction, editStaticToken, progressConnection);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

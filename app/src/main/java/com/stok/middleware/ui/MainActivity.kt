@@ -11,6 +11,8 @@ import android.os.Handler
 import android.os.Looper
 import android.util.TypedValue
 import android.view.KeyEvent
+import android.view.Menu
+import android.view.MenuItem
 import android.view.ViewGroup
 import android.view.View
 import android.view.inputmethod.InputMethodManager
@@ -33,9 +35,11 @@ import com.stok.middleware.data.model.PendingScanRow
 import com.stok.middleware.data.model.PendingScanState
 import com.stok.middleware.data.model.ScanLogItem
 import com.stok.middleware.data.model.ScanMode
+import com.stok.middleware.data.model.StockOpMode
 import com.stok.middleware.databinding.ActivityMainBinding
 import com.stok.middleware.scanner.BarcodeInputHandler
 import com.stok.middleware.network.ApiConfig
+import com.stok.middleware.network.OpnameCompareApi
 import com.stok.middleware.network.ScanUpload
 import com.stok.middleware.scanner.ScannerManager
 import com.stok.middleware.utils.ScreenLog
@@ -64,6 +68,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var pendingAdapter: PendingScanAdapter
 
     private var lastScanValue: String = ""
+    private var currentStockMode: StockOpMode = StockOpMode.MASUK
+    private var isLogVisible: Boolean = false
     private val logListFlow = MutableStateFlow<List<ScanLogItem>>(emptyList())
     private val pendingScans = MutableStateFlow<List<PendingScanRow>>(emptyList())
 
@@ -87,6 +93,8 @@ class MainActivity : AppCompatActivity() {
         })
         binding.recyclerLog.layoutManager = LinearLayoutManager(this)
         binding.recyclerLog.adapter = logAdapter
+        binding.sectionLog.visibility = View.GONE
+        binding.recyclerLog.visibility = View.GONE
 
         logListFlow.onEach { list ->
             logAdapter.submitList(list)
@@ -136,29 +144,39 @@ class MainActivity : AppCompatActivity() {
         barcodeHandler.attach()
         binding.editBarcode.showSoftInputOnFocus = false
 
-        binding.editBarcode.setOnLongClickListener {
-            binding.editBarcode.showSoftInputOnFocus = true
-            binding.editBarcode.requestFocus()
-            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            imm.showSoftInput(binding.editBarcode, InputMethodManager.SHOW_IMPLICIT)
-            true
-        }
         binding.editBarcode.setOnFocusChangeListener { v, hasFocus ->
-            if (!hasFocus) (v as EditText).showSoftInputOnFocus = false
+            val et = v as EditText
+            et.showSoftInputOnFocus = false
+            if (hasFocus) hideSoftKeyboard(et)
+        }
+        binding.editBarcode.setOnClickListener {
+            binding.editBarcode.showSoftInputOnFocus = false
+            hideSoftKeyboard(binding.editBarcode)
         }
 
-        binding.btnClear.setOnClickListener { clearAll() }
-        binding.btnSettings.setOnClickListener { showSettingsPasswordDialog() }
         binding.btnCopyLog.setOnClickListener { copyFullLog() }
         binding.btnSendLog.setOnClickListener { sendFullLog() }
         binding.btnCopyLastScan.setOnClickListener { copyLastScanValue() }
         binding.btnClearLastScan.setOnClickListener { clearLastScanValue() }
         binding.btnSendScans.setOnClickListener { sendPendingBatch() }
         binding.btnClearQueue.setOnClickListener { clearPendingQueue() }
+        binding.btnOpnameCompare.setOnClickListener { runOpnameCompare() }
 
-        binding.textVersion.text = getString(R.string.app_version, getAppVersionName())
+        binding.toggleStockMode.check(binding.btnModeMasuk.id)
+        binding.toggleStockMode.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (!isChecked) return@addOnButtonCheckedListener
+            currentStockMode = when (checkedId) {
+                R.id.btnModeKeluar -> StockOpMode.KELUAR
+                R.id.btnModeOpname -> StockOpMode.OPNAME
+                R.id.btnModeReadonly -> StockOpMode.READONLY
+                else -> StockOpMode.MASUK
+            }
+            updateModeUi()
+        }
+        updateModeUi()
 
         binding.editBarcode.post { binding.editBarcode.requestFocus() }
+        hideSoftKeyboard(binding.editBarcode)
         logRfidPermissionAndConfig()
         ScreenLog.d("[onCreate]", "Registering RFID receiver — action=${scannerManager.getRfidIntentAction()}, extraKey=${scannerManager.getRfidExtraKey()}")
         scannerManager.registerRfidReceiver()
@@ -169,6 +187,39 @@ class MainActivity : AppCompatActivity() {
         ScreenLog.d("[onResume]", "Reloading RFID config")
         scannerManager.reloadRfidConfig()
         binding.editBarcode.post { binding.editBarcode.requestFocus() }
+        hideSoftKeyboard(binding.editBarcode)
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.main_overflow_menu, menu)
+        val toggle = menu.findItem(R.id.menu_toggle_log)
+        toggle?.title = if (isLogVisible) {
+            getString(R.string.menu_hide_log)
+        } else {
+            getString(R.string.menu_show_log)
+        }
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.menu_toggle_log -> {
+                isLogVisible = !isLogVisible
+                binding.sectionLog.visibility = if (isLogVisible) View.VISIBLE else View.GONE
+                binding.recyclerLog.visibility = if (isLogVisible) View.VISIBLE else View.GONE
+                invalidateOptionsMenu()
+                true
+            }
+            R.id.menu_clear -> {
+                clearAll()
+                true
+            }
+            R.id.menu_settings -> {
+                showSettingsPasswordDialog()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 
     /**
@@ -295,6 +346,26 @@ class MainActivity : AppCompatActivity() {
         wedgeBuffer.clear()
     }
 
+    private fun updateModeUi() {
+        val modeText = when (currentStockMode) {
+            StockOpMode.MASUK -> getString(R.string.mode_masuk)
+            StockOpMode.KELUAR -> getString(R.string.mode_keluar)
+            StockOpMode.OPNAME -> getString(R.string.mode_opname)
+            StockOpMode.READONLY -> getString(R.string.mode_readonly)
+        }
+        supportActionBar?.subtitle = "Mode: $modeText"
+        binding.btnOpnameCompare.visibility = if (currentStockMode == StockOpMode.OPNAME) {
+            View.VISIBLE
+        } else {
+            View.GONE
+        }
+    }
+
+    private fun hideSoftKeyboard(view: View) {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager ?: return
+        imm.hideSoftInputFromWindow(view.windowToken, 0)
+    }
+
     override fun onDestroy() {
         ScreenLog.d("[onDestroy]", "Unregistering RFID receiver")
         scannerManager.unregisterRfidReceiver()
@@ -336,6 +407,7 @@ class MainActivity : AppCompatActivity() {
             createdAt = ts,
             value = trimmed,
             mode = mode,
+            stockOpMode = currentStockMode,
             state = PendingScanState.PENDING
         )
         pendingScans.update { listOf(row) + it }
@@ -358,14 +430,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun sendPendingBatch() {
-        val toSend = pendingScans.value.filter { it.state == PendingScanState.PENDING }
+        val toSend = pendingScans.value.filter {
+            it.state == PendingScanState.PENDING && it.stockOpMode != StockOpMode.OPNAME
+        }
         if (toSend.isEmpty()) {
-            Snackbar.make(binding.root, getString(R.string.nothing_to_send), Snackbar.LENGTH_SHORT).show()
+            Snackbar.make(binding.root, getString(R.string.nothing_to_send_non_opname), Snackbar.LENGTH_SHORT).show()
             return
         }
         binding.btnSendScans.isEnabled = false
         setApiLoading(true)
-        binding.textStatus.text = getString(R.string.status_loading_scan)
         lifecycleScope.launch {
             var ok = 0
             var fail = 0
@@ -375,7 +448,12 @@ class MainActivity : AppCompatActivity() {
                     ScanMode.KEYBOARD -> "barcode"
                     ScanMode.RFID -> "rfid"
                 }
-                val result = ScanUpload.upload(prefs, row.value, apiSource)
+                val result = ScanUpload.upload(
+                    prefs = prefs,
+                    value = row.value,
+                    apiSource = apiSource,
+                    stockOpMode = row.stockOpMode
+                )
                 result.fold(
                     onSuccess = { msg ->
                         ok++
@@ -394,7 +472,6 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread {
                 binding.btnSendScans.isEnabled = true
                 setApiLoading(false)
-                binding.textStatus.text = "-"
                 Snackbar.make(
                     binding.root,
                     getString(R.string.batch_send_done, ok, fail),
@@ -405,10 +482,68 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun runOpnameCompare() {
+        val scanned = pendingScans.value
+            .filter { it.stockOpMode == StockOpMode.OPNAME }
+            .map { it.value }
+            .distinct()
+        if (scanned.isEmpty()) {
+            Snackbar.make(binding.root, getString(R.string.opname_compare_need_data), Snackbar.LENGTH_SHORT).show()
+            return
+        }
+        setApiLoading(true)
+        lifecycleScope.launch {
+            val result = OpnameCompareApi.compare(prefs, scanned)
+            runOnUiThread {
+                setApiLoading(false)
+                result.fold(
+                    onSuccess = { cmp ->
+                        showOpnameCompareDialog(cmp)
+                    },
+                    onFailure = { e ->
+                        SoundHelper.playError()
+                        Snackbar.make(
+                            binding.root,
+                            "Compare opname gagal: ${e.message ?: "Error"}",
+                            Snackbar.LENGTH_LONG
+                        ).show()
+                    }
+                )
+            }
+        }
+    }
+
+    private fun showOpnameCompareDialog(cmp: com.stok.middleware.network.OpnameCompareResult) {
+        val missingWebPreview = cmp.missingOnWeb.take(20).joinToString("\n")
+        val missingScanPreview = cmp.missingInScan.take(20).joinToString("\n")
+        val text = buildString {
+            append(getString(R.string.opname_compare_done))
+            append("\n\n")
+            append("Match: ${cmp.matched.size}\n")
+            append("Scan tidak ada di web: ${cmp.missingOnWeb.size}\n")
+            append("Ada di web tapi tidak discan: ${cmp.missingInScan.size}\n")
+            if (!cmp.message.isNullOrBlank()) append("\nPesan server: ${cmp.message}\n")
+            if (cmp.missingOnWeb.isNotEmpty()) {
+                append("\n-- Scan tidak ada di web --\n")
+                append(missingWebPreview)
+                if (cmp.missingOnWeb.size > 20) append("\n... +${cmp.missingOnWeb.size - 20} lagi")
+            }
+            if (cmp.missingInScan.isNotEmpty()) {
+                append("\n\n-- Ada di web tapi tidak discan --\n")
+                append(missingScanPreview)
+                if (cmp.missingInScan.size > 20) append("\n... +${cmp.missingInScan.size - 20} lagi")
+            }
+        }
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.mode_opname))
+            .setMessage(text)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
     private fun clearAll() {
         binding.editBarcode.setText("")
         clearLastScanValue()
-        binding.textStatus.text = "-"
         logRepository.clearLogs()
         loadLogs()
         barcodeHandler.clear()
@@ -459,8 +594,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setApiLoading(show: Boolean) {
-        binding.progressStatus.visibility = if (show) View.VISIBLE else View.GONE
-        if (!show) binding.textStatus.text = "-"
+        // Section status dihapus sesuai kebutuhan UI.
     }
 
     private fun sendFullLog() {
@@ -470,7 +604,6 @@ class MainActivity : AppCompatActivity() {
             return
         }
         setApiLoading(true)
-        binding.textStatus.text = getString(R.string.status_loading_log)
         lifecycleScope.launch {
             try {
                 val service = ApiConfig.createRfidApiService(prefs)

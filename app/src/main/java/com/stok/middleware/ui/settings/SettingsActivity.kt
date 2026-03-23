@@ -35,6 +35,7 @@ class SettingsActivity : AppCompatActivity() {
 
         binding.editBaseUrl.setText(prefs.baseUrl)
         binding.editEndpointPath.setText(prefs.endpointPath)
+        binding.editOpnameComparePath.setText(prefs.opnameComparePath)
         binding.editStaticToken.setText(prefs.staticToken)
         binding.editRfidIntentAction.setText(prefs.rfidIntentAction)
         binding.editRfidExtraKey.setText(prefs.rfidExtraKey)
@@ -80,6 +81,9 @@ class SettingsActivity : AppCompatActivity() {
     private fun save() {
         prefs.baseUrl = binding.editBaseUrl.text.toString().trim()
         prefs.endpointPath = binding.editEndpointPath.text.toString().trim()
+        prefs.opnameComparePath = binding.editOpnameComparePath.text.toString().trim().ifBlank {
+            AppPreferences.DEFAULT_OPNAME_COMPARE_PATH
+        }
         prefs.staticToken = binding.editStaticToken.text.toString().trim()
         prefs.rfidIntentAction = binding.editRfidIntentAction.text.toString().trim().ifBlank {
             AppPreferences.DEFAULT_RFID_ACTION

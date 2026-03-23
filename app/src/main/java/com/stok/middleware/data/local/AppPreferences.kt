@@ -21,6 +21,10 @@ class AppPreferences(context: Context) {
         get() = prefs.getString(KEY_ENDPOINT_PATH, DEFAULT_ENDPOINT_PATH) ?: DEFAULT_ENDPOINT_PATH
         set(value) = prefs.edit().putString(KEY_ENDPOINT_PATH, value).apply()
 
+    var opnameComparePath: String
+        get() = prefs.getString(KEY_OPNAME_COMPARE_PATH, DEFAULT_OPNAME_COMPARE_PATH) ?: DEFAULT_OPNAME_COMPARE_PATH
+        set(value) = prefs.edit().putString(KEY_OPNAME_COMPARE_PATH, value).apply()
+
     var staticToken: String
         get() = prefs.getString(KEY_STATIC_TOKEN, "") ?: ""
         set(value) = prefs.edit().putString(KEY_STATIC_TOKEN, value).apply()
@@ -37,12 +41,14 @@ class AppPreferences(context: Context) {
         private const val PREFS_NAME = "stok_scanner_prefs"
         private const val KEY_BASE_URL = "base_url"
         private const val KEY_ENDPOINT_PATH = "endpoint_path"
+        private const val KEY_OPNAME_COMPARE_PATH = "opname_compare_path"
         private const val KEY_STATIC_TOKEN = "static_token"
         private const val KEY_RFID_INTENT_ACTION = "rfid_intent_action"
         private const val KEY_RFID_EXTRA_KEY = "rfid_extra_key"
 
         const val DEFAULT_BASE_URL = "https://pttetragi.com/public"
         const val DEFAULT_ENDPOINT_PATH = "api/rfid/scan"
+        const val DEFAULT_OPNAME_COMPARE_PATH = "api/opname/compare"
         /**
          * Broadcast RFID Chainway C72 / keyboardemulator (RSCJA).
          * Key extra: [DEFAULT_RFID_EXTRA_KEY] = "data".

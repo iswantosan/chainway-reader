@@ -16,6 +16,7 @@
     <string name="btn_clear_queue">Hapus antrean</string>
     <string name="btn_copy">Copy</string>
     <string name="btn_copy_log">Copy log</string>
+    <string name="btn_opname_compare">Proses opname</string>
     <string name="btn_save">Save</string>
     <string name="btn_send_log">Kirim log</string>
     <string name="btn_send_scans">Kirim ke server</string>
@@ -28,7 +29,18 @@
     <string name="log_send_failed">Gagal mengirim log: %1$s</string>
     <string name="log_sent">Log terkirim ke server</string>
     <string name="log_title">Log Scan</string>
+    <string name="menu_hide_log">Sembunyikan log teknis</string>
+    <string name="menu_show_log">Tampilkan log teknis</string>
+    <string name="mode_keluar">Keluar</string>
+    <string name="mode_masuk">Masuk</string>
+    <string name="mode_opname">Opname</string>
+    <string name="mode_readonly">Readonly</string>
+    <string name="mode_title">Mode stok</string>
     <string name="nothing_to_send">Tidak ada scan yang belum dikirim</string>
+    <string name="nothing_to_send_non_opname">Tidak ada data mode Masuk/Keluar/Readonly yang belum dikirim</string>
+    <string name="opname_compare_done">Opname selesai</string>
+    <string name="opname_compare_need_data">Belum ada data scan mode Opname</string>
+    <string name="opname_compare_path">Endpoint compare opname</string>
     <string name="pending_state_failed">Gagal</string>
     <string name="pending_state_pending">Belum dikirim</string>
     <string name="pending_state_sending">Mengirim…</string>

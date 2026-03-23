@@ -3184,15 +3184,18 @@ id bounce
 id bounceBoth
 id bounceEnd
 id bounceStart
-id btnClear
 id btnClearLastScan
 id btnClearQueue
 id btnCopyLastScan
 id btnCopyLog
+id btnModeKeluar
+id btnModeMasuk
+id btnModeOpname
+id btnModeReadonly
+id btnOpnameCompare
 id btnSave
 id btnSendLog
 id btnSendScans
-id btnSettings
 id btnTestConnection
 id buttonPanel
 id cache_measures
@@ -3270,6 +3273,7 @@ id edge
 id editBarcode
 id editBaseUrl
 id editEndpointPath
+id editOpnameComparePath
 id editRfidExtraKey
 id editRfidIntentAction
 id editStaticToken
@@ -3322,7 +3326,6 @@ id ifRoom
 id ignore
 id ignoreRequest
 id image
-id imgAppLogo
 id immediateStop
 id included
 id indeterminate
@@ -3379,6 +3382,9 @@ id material_timepicker_ok_button
 id material_timepicker_view
 id material_value_index
 id matrix
+id menu_clear
+id menu_settings
+id menu_toggle_log
 id message
 id middle
 id mini
@@ -3468,7 +3474,6 @@ id position
 id postLayout
 id pressed
 id progressConnection
-id progressStatus
 id progress_circular
 id progress_horizontal
 id radio
@@ -3483,6 +3488,7 @@ id rightToLeft
 id right_icon
 id right_side
 id rounded
+id rowLastScan
 id row_index_key
 id save_non_transition_alpha
 id save_overlay_view
@@ -3504,6 +3510,7 @@ id search_mag_icon
 id search_plate
 id search_src_text
 id search_voice_btn
+id sectionLog
 id sectionScan
 id select_dialog_listview
 id selected
@@ -3568,9 +3575,7 @@ id textQueueCount
 id textSpacerNoButtons
 id textSpacerNoTitle
 id textStart
-id textStatus
 id textTop
-id textVersion
 id text_input_end_icon
 id text_input_error_icon
 id text_input_start_icon
@@ -3582,10 +3587,10 @@ id textinput_prefix_text
 id textinput_suffix_text
 id time
 id title
-id titleApp
 id titleDividerNoCustom
 id title_template
 id toggle
+id toggleStockMode
 id top
 id topPanel
 id touch_outside
@@ -3817,6 +3822,7 @@ layout select_dialog_item_material
 layout select_dialog_multichoice_material
 layout select_dialog_singlechoice_material
 layout support_simple_spinner_dropdown_item
+menu main_overflow_menu
 plurals mtrl_badge_content_description
 string abc_action_bar_home_description
 string abc_action_bar_up_description
@@ -3861,6 +3867,7 @@ string btn_clear
 string btn_clear_queue
 string btn_copy
 string btn_copy_log
+string btn_opname_compare
 string btn_save
 string btn_send_log
 string btn_send_scans
@@ -3930,6 +3937,13 @@ string material_timepicker_minute
 string material_timepicker_pm
 string material_timepicker_select_time
 string material_timepicker_text_input_mode_description
+string menu_hide_log
+string menu_show_log
+string mode_keluar
+string mode_masuk
+string mode_opname
+string mode_readonly
+string mode_title
 string mtrl_badge_numberless_content_description
 string mtrl_checkbox_button_icon_path_checked
 string mtrl_checkbox_button_icon_path_group_name
@@ -3993,6 +4007,10 @@ string mtrl_switch_track_path
 string mtrl_timepicker_cancel
 string mtrl_timepicker_confirm
 string nothing_to_send
+string nothing_to_send_non_opname
+string opname_compare_done
+string opname_compare_need_data
+string opname_compare_path
 string password_toggle_content_description
 string path_password_eye
 string path_password_eye_mask_strike_through

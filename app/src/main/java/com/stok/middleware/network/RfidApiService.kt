@@ -24,4 +24,7 @@ interface RfidApiService {
      */
     @POST
     suspend fun sendLog(@Url url: String, @Body payload: LogExportPayload): Response<ResponseBody>
+
+    @POST
+    suspend fun sendOpnameCompare(@Url url: String, @Body payload: OpnameComparePayload): Response<ResponseBody>
 }

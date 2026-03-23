@@ -59,6 +59,12 @@ object ApiConfig {
         return "$base/api/log/save"
     }
 
+    fun getOpnameCompareUrl(prefs: AppPreferences): String {
+        val base = prefs.baseUrl.trim().trimEnd('/')
+        val path = prefs.opnameComparePath.trim().trimStart('/')
+        return if (path.isEmpty()) "$base/api/opname/compare" else "$base/$path"
+    }
+
     private fun getRfidScanBaseUrl(prefs: AppPreferences): String {
         var base = prefs.baseUrl.trim()
         if (!base.endsWith("/")) base += "/"

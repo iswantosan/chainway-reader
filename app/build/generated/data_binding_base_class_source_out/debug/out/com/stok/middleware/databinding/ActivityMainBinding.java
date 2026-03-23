@@ -6,9 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -17,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
 import androidx.viewbinding.ViewBindings;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.stok.middleware.R;
 import java.lang.NullPointerException;
 import java.lang.Override;
@@ -25,9 +24,6 @@ import java.lang.String;
 public final class ActivityMainBinding implements ViewBinding {
   @NonNull
   private final NestedScrollView rootView;
-
-  @NonNull
-  public final Button btnClear;
 
   @NonNull
   public final Button btnClearLastScan;
@@ -42,28 +38,40 @@ public final class ActivityMainBinding implements ViewBinding {
   public final Button btnCopyLog;
 
   @NonNull
+  public final MaterialButton btnModeKeluar;
+
+  @NonNull
+  public final MaterialButton btnModeMasuk;
+
+  @NonNull
+  public final MaterialButton btnModeOpname;
+
+  @NonNull
+  public final MaterialButton btnModeReadonly;
+
+  @NonNull
+  public final MaterialButton btnOpnameCompare;
+
+  @NonNull
   public final Button btnSendLog;
 
   @NonNull
   public final MaterialButton btnSendScans;
 
   @NonNull
-  public final Button btnSettings;
-
-  @NonNull
   public final EditText editBarcode;
-
-  @NonNull
-  public final ImageView imgAppLogo;
-
-  @NonNull
-  public final ProgressBar progressStatus;
 
   @NonNull
   public final RecyclerView recyclerLog;
 
   @NonNull
   public final RecyclerView recyclerPending;
+
+  @NonNull
+  public final LinearLayout rowLastScan;
+
+  @NonNull
+  public final LinearLayout sectionLog;
 
   @NonNull
   public final LinearLayout sectionScan;
@@ -75,43 +83,40 @@ public final class ActivityMainBinding implements ViewBinding {
   public final TextView textQueueCount;
 
   @NonNull
-  public final TextView textStatus;
+  public final MaterialButtonToggleGroup toggleStockMode;
 
-  @NonNull
-  public final TextView textVersion;
-
-  @NonNull
-  public final TextView titleApp;
-
-  private ActivityMainBinding(@NonNull NestedScrollView rootView, @NonNull Button btnClear,
-      @NonNull Button btnClearLastScan, @NonNull MaterialButton btnClearQueue,
-      @NonNull Button btnCopyLastScan, @NonNull Button btnCopyLog, @NonNull Button btnSendLog,
-      @NonNull MaterialButton btnSendScans, @NonNull Button btnSettings,
-      @NonNull EditText editBarcode, @NonNull ImageView imgAppLogo,
-      @NonNull ProgressBar progressStatus, @NonNull RecyclerView recyclerLog,
-      @NonNull RecyclerView recyclerPending, @NonNull LinearLayout sectionScan,
+  private ActivityMainBinding(@NonNull NestedScrollView rootView, @NonNull Button btnClearLastScan,
+      @NonNull MaterialButton btnClearQueue, @NonNull Button btnCopyLastScan,
+      @NonNull Button btnCopyLog, @NonNull MaterialButton btnModeKeluar,
+      @NonNull MaterialButton btnModeMasuk, @NonNull MaterialButton btnModeOpname,
+      @NonNull MaterialButton btnModeReadonly, @NonNull MaterialButton btnOpnameCompare,
+      @NonNull Button btnSendLog, @NonNull MaterialButton btnSendScans,
+      @NonNull EditText editBarcode, @NonNull RecyclerView recyclerLog,
+      @NonNull RecyclerView recyclerPending, @NonNull LinearLayout rowLastScan,
+      @NonNull LinearLayout sectionLog, @NonNull LinearLayout sectionScan,
       @NonNull TextView textLastScan, @NonNull TextView textQueueCount,
-      @NonNull TextView textStatus, @NonNull TextView textVersion, @NonNull TextView titleApp) {
+      @NonNull MaterialButtonToggleGroup toggleStockMode) {
     this.rootView = rootView;
-    this.btnClear = btnClear;
     this.btnClearLastScan = btnClearLastScan;
     this.btnClearQueue = btnClearQueue;
     this.btnCopyLastScan = btnCopyLastScan;
     this.btnCopyLog = btnCopyLog;
+    this.btnModeKeluar = btnModeKeluar;
+    this.btnModeMasuk = btnModeMasuk;
+    this.btnModeOpname = btnModeOpname;
+    this.btnModeReadonly = btnModeReadonly;
+    this.btnOpnameCompare = btnOpnameCompare;
     this.btnSendLog = btnSendLog;
     this.btnSendScans = btnSendScans;
-    this.btnSettings = btnSettings;
     this.editBarcode = editBarcode;
-    this.imgAppLogo = imgAppLogo;
-    this.progressStatus = progressStatus;
     this.recyclerLog = recyclerLog;
     this.recyclerPending = recyclerPending;
+    this.rowLastScan = rowLastScan;
+    this.sectionLog = sectionLog;
     this.sectionScan = sectionScan;
     this.textLastScan = textLastScan;
     this.textQueueCount = textQueueCount;
-    this.textStatus = textStatus;
-    this.textVersion = textVersion;
-    this.titleApp = titleApp;
+    this.toggleStockMode = toggleStockMode;
   }
 
   @Override
@@ -141,12 +146,6 @@ public final class ActivityMainBinding implements ViewBinding {
     // This is done to optimize the compiled bytecode for size and performance.
     int id;
     missingId: {
-      id = R.id.btnClear;
-      Button btnClear = ViewBindings.findChildViewById(rootView, id);
-      if (btnClear == null) {
-        break missingId;
-      }
-
       id = R.id.btnClearLastScan;
       Button btnClearLastScan = ViewBindings.findChildViewById(rootView, id);
       if (btnClearLastScan == null) {
@@ -171,6 +170,36 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.btnModeKeluar;
+      MaterialButton btnModeKeluar = ViewBindings.findChildViewById(rootView, id);
+      if (btnModeKeluar == null) {
+        break missingId;
+      }
+
+      id = R.id.btnModeMasuk;
+      MaterialButton btnModeMasuk = ViewBindings.findChildViewById(rootView, id);
+      if (btnModeMasuk == null) {
+        break missingId;
+      }
+
+      id = R.id.btnModeOpname;
+      MaterialButton btnModeOpname = ViewBindings.findChildViewById(rootView, id);
+      if (btnModeOpname == null) {
+        break missingId;
+      }
+
+      id = R.id.btnModeReadonly;
+      MaterialButton btnModeReadonly = ViewBindings.findChildViewById(rootView, id);
+      if (btnModeReadonly == null) {
+        break missingId;
+      }
+
+      id = R.id.btnOpnameCompare;
+      MaterialButton btnOpnameCompare = ViewBindings.findChildViewById(rootView, id);
+      if (btnOpnameCompare == null) {
+        break missingId;
+      }
+
       id = R.id.btnSendLog;
       Button btnSendLog = ViewBindings.findChildViewById(rootView, id);
       if (btnSendLog == null) {
@@ -183,27 +212,9 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
-      id = R.id.btnSettings;
-      Button btnSettings = ViewBindings.findChildViewById(rootView, id);
-      if (btnSettings == null) {
-        break missingId;
-      }
-
       id = R.id.editBarcode;
       EditText editBarcode = ViewBindings.findChildViewById(rootView, id);
       if (editBarcode == null) {
-        break missingId;
-      }
-
-      id = R.id.imgAppLogo;
-      ImageView imgAppLogo = ViewBindings.findChildViewById(rootView, id);
-      if (imgAppLogo == null) {
-        break missingId;
-      }
-
-      id = R.id.progressStatus;
-      ProgressBar progressStatus = ViewBindings.findChildViewById(rootView, id);
-      if (progressStatus == null) {
         break missingId;
       }
 
@@ -216,6 +227,18 @@ public final class ActivityMainBinding implements ViewBinding {
       id = R.id.recyclerPending;
       RecyclerView recyclerPending = ViewBindings.findChildViewById(rootView, id);
       if (recyclerPending == null) {
+        break missingId;
+      }
+
+      id = R.id.rowLastScan;
+      LinearLayout rowLastScan = ViewBindings.findChildViewById(rootView, id);
+      if (rowLastScan == null) {
+        break missingId;
+      }
+
+      id = R.id.sectionLog;
+      LinearLayout sectionLog = ViewBindings.findChildViewById(rootView, id);
+      if (sectionLog == null) {
         break missingId;
       }
 
@@ -237,28 +260,16 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
-      id = R.id.textStatus;
-      TextView textStatus = ViewBindings.findChildViewById(rootView, id);
-      if (textStatus == null) {
+      id = R.id.toggleStockMode;
+      MaterialButtonToggleGroup toggleStockMode = ViewBindings.findChildViewById(rootView, id);
+      if (toggleStockMode == null) {
         break missingId;
       }
 
-      id = R.id.textVersion;
-      TextView textVersion = ViewBindings.findChildViewById(rootView, id);
-      if (textVersion == null) {
-        break missingId;
-      }
-
-      id = R.id.titleApp;
-      TextView titleApp = ViewBindings.findChildViewById(rootView, id);
-      if (titleApp == null) {
-        break missingId;
-      }
-
-      return new ActivityMainBinding((NestedScrollView) rootView, btnClear, btnClearLastScan,
-          btnClearQueue, btnCopyLastScan, btnCopyLog, btnSendLog, btnSendScans, btnSettings,
-          editBarcode, imgAppLogo, progressStatus, recyclerLog, recyclerPending, sectionScan,
-          textLastScan, textQueueCount, textStatus, textVersion, titleApp);
+      return new ActivityMainBinding((NestedScrollView) rootView, btnClearLastScan, btnClearQueue,
+          btnCopyLastScan, btnCopyLog, btnModeKeluar, btnModeMasuk, btnModeOpname, btnModeReadonly,
+          btnOpnameCompare, btnSendLog, btnSendScans, editBarcode, recyclerLog, recyclerPending,
+          rowLastScan, sectionLog, sectionScan, textLastScan, textQueueCount, toggleStockMode);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

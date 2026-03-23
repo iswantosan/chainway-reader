@@ -29,10 +29,11 @@ class PendingScanAdapter : ListAdapter<PendingScanRow, PendingScanAdapter.VH>(Di
             binding.itemScanId.text = "#${row.shortId()}"
             binding.itemScanTime.text = row.createdAt
             binding.itemScanValue.text = row.value
-            binding.itemScanMode.text = when (row.mode) {
+            val sourceLabel = when (row.mode) {
                 ScanMode.KEYBOARD -> "KEYBOARD"
                 ScanMode.RFID -> "RFID"
             }
+            binding.itemScanMode.text = "${row.stockOpMode.label} • $sourceLabel"
             val (stateText, colorRes) = when (row.state) {
                 PendingScanState.PENDING -> itemView.context.getString(R.string.pending_state_pending) to R.color.status_local
                 PendingScanState.SENDING -> itemView.context.getString(R.string.pending_state_sending) to R.color.primary_dark

@@ -3183,15 +3183,18 @@ int id bounce 0x7f08005e
 int id bounceBoth 0x7f08005f
 int id bounceEnd 0x7f080060
 int id bounceStart 0x7f080061
-int id btnClear 0x7f080062
 int id btnClearLastScan 0x7f080063
 int id btnClearQueue 0x7f080064
 int id btnCopyLastScan 0x7f080065
 int id btnCopyLog 0x7f080066
+int id btnModeKeluar 0x7f080216
+int id btnModeMasuk 0x7f080217
+int id btnModeOpname 0x7f080218
+int id btnModeReadonly 0x7f08021c
+int id btnOpnameCompare 0x7f080219
 int id btnSave 0x7f080067
 int id btnSendLog 0x7f080068
 int id btnSendScans 0x7f080069
-int id btnSettings 0x7f08006a
 int id btnTestConnection 0x7f08006b
 int id buttonPanel 0x7f08006c
 int id cache_measures 0x7f08006d
@@ -3269,6 +3272,7 @@ int id edge 0x7f0800b4
 int id editBarcode 0x7f0800b5
 int id editBaseUrl 0x7f0800b6
 int id editEndpointPath 0x7f0800b7
+int id editOpnameComparePath 0x7f08021a
 int id editRfidExtraKey 0x7f0800b8
 int id editRfidIntentAction 0x7f0800b9
 int id editStaticToken 0x7f0800ba
@@ -3321,7 +3325,6 @@ int id ifRoom 0x7f0800e8
 int id ignore 0x7f0800e9
 int id ignoreRequest 0x7f0800ea
 int id image 0x7f0800eb
-int id imgAppLogo 0x7f0800ec
 int id immediateStop 0x7f0800ed
 int id included 0x7f0800ee
 int id indeterminate 0x7f0800ef
@@ -3378,6 +3381,9 @@ int id material_timepicker_ok_button 0x7f080121
 int id material_timepicker_view 0x7f080122
 int id material_value_index 0x7f080123
 int id matrix 0x7f080124
+int id menu_clear 0x7f08021d
+int id menu_settings 0x7f08021e
+int id menu_toggle_log 0x7f08021f
 int id message 0x7f080125
 int id middle 0x7f080126
 int id mini 0x7f080127
@@ -3467,7 +3473,6 @@ int id position 0x7f08017a
 int id postLayout 0x7f08017b
 int id pressed 0x7f08017c
 int id progressConnection 0x7f08017d
-int id progressStatus 0x7f08017e
 int id progress_circular 0x7f08017f
 int id progress_horizontal 0x7f080180
 int id radio 0x7f080181
@@ -3482,6 +3487,7 @@ int id rightToLeft 0x7f080189
 int id right_icon 0x7f08018a
 int id right_side 0x7f08018b
 int id rounded 0x7f08018c
+int id rowLastScan 0x7f080221
 int id row_index_key 0x7f08018d
 int id save_non_transition_alpha 0x7f08018e
 int id save_overlay_view 0x7f08018f
@@ -3503,6 +3509,7 @@ int id search_mag_icon 0x7f08019e
 int id search_plate 0x7f08019f
 int id search_src_text 0x7f0801a0
 int id search_voice_btn 0x7f0801a1
+int id sectionLog 0x7f080220
 int id sectionScan 0x7f0801a2
 int id select_dialog_listview 0x7f0801a3
 int id selected 0x7f0801a4
@@ -3567,9 +3574,7 @@ int id textQueueCount 0x7f0801de
 int id textSpacerNoButtons 0x7f0801df
 int id textSpacerNoTitle 0x7f0801e0
 int id textStart 0x7f0801e1
-int id textStatus 0x7f0801e2
 int id textTop 0x7f0801e3
-int id textVersion 0x7f0801e4
 int id text_input_end_icon 0x7f0801e5
 int id text_input_error_icon 0x7f0801e6
 int id text_input_start_icon 0x7f0801e7
@@ -3581,10 +3586,10 @@ int id textinput_prefix_text 0x7f0801ec
 int id textinput_suffix_text 0x7f0801ed
 int id time 0x7f0801ee
 int id title 0x7f0801ef
-int id titleApp 0x7f0801f0
 int id titleDividerNoCustom 0x7f0801f1
 int id title_template 0x7f0801f2
 int id toggle 0x7f0801f3
+int id toggleStockMode 0x7f08021b
 int id top 0x7f0801f4
 int id topPanel 0x7f0801f5
 int id touch_outside 0x7f0801f6
@@ -3816,6 +3821,7 @@ int layout select_dialog_item_material 0x7f0b006b
 int layout select_dialog_multichoice_material 0x7f0b006c
 int layout select_dialog_singlechoice_material 0x7f0b006d
 int layout support_simple_spinner_dropdown_item 0x7f0b006e
+int menu main_overflow_menu 0x7f110000
 int plurals mtrl_badge_content_description 0x7f0d0000
 int string abc_action_bar_home_description 0x7f0e0000
 int string abc_action_bar_up_description 0x7f0e0001
@@ -3860,6 +3866,7 @@ int string btn_clear 0x7f0e0027
 int string btn_clear_queue 0x7f0e0028
 int string btn_copy 0x7f0e0029
 int string btn_copy_log 0x7f0e002a
+int string btn_opname_compare 0x7f0e00d6
 int string btn_save 0x7f0e002b
 int string btn_send_log 0x7f0e002c
 int string btn_send_scans 0x7f0e002d
@@ -3929,6 +3936,13 @@ int string material_timepicker_minute 0x7f0e006c
 int string material_timepicker_pm 0x7f0e006d
 int string material_timepicker_select_time 0x7f0e006e
 int string material_timepicker_text_input_mode_description 0x7f0e006f
+int string menu_hide_log 0x7f0e00df
+int string menu_show_log 0x7f0e00e0
+int string mode_keluar 0x7f0e00d7
+int string mode_masuk 0x7f0e00d8
+int string mode_opname 0x7f0e00d9
+int string mode_readonly 0x7f0e00e1
+int string mode_title 0x7f0e00da
 int string mtrl_badge_numberless_content_description 0x7f0e0070
 int string mtrl_checkbox_button_icon_path_checked 0x7f0e0071
 int string mtrl_checkbox_button_icon_path_group_name 0x7f0e0072
@@ -3992,6 +4006,10 @@ int string mtrl_switch_track_path 0x7f0e00ab
 int string mtrl_timepicker_cancel 0x7f0e00ac
 int string mtrl_timepicker_confirm 0x7f0e00ad
 int string nothing_to_send 0x7f0e00ae
+int string nothing_to_send_non_opname 0x7f0e00db
+int string opname_compare_done 0x7f0e00dc
+int string opname_compare_need_data 0x7f0e00dd
+int string opname_compare_path 0x7f0e00de
 int string password_toggle_content_description 0x7f0e00af
 int string path_password_eye 0x7f0e00b0
 int string path_password_eye_mask_strike_through 0x7f0e00b1

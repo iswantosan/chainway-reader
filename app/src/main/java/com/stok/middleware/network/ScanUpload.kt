@@ -2,6 +2,7 @@ package com.stok.middleware.network
 
 import com.stok.middleware.data.local.AppPreferences
 import com.stok.middleware.data.model.RfidPayload
+import com.stok.middleware.data.model.StockOpMode
 import com.stok.middleware.utils.ApiUiMessages
 import com.stok.middleware.utils.ScreenLog
 import kotlinx.coroutines.Dispatchers
@@ -22,7 +23,12 @@ object ScanUpload {
         timeZone = TimeZone.getTimeZone("UTC")
     }
 
-    suspend fun upload(prefs: AppPreferences, value: String, apiSource: String): Result<String> {
+    suspend fun upload(
+        prefs: AppPreferences,
+        value: String,
+        apiSource: String,
+        stockOpMode: StockOpMode
+    ): Result<String> {
         val trimmed = value.trim()
         if (trimmed.isEmpty()) return Result.failure(IllegalArgumentException("Kosong"))
 
@@ -31,9 +37,13 @@ object ScanUpload {
             epc = trimmed,
             scanTime = scanTime,
             deviceName = "Chainway C72",
-            source = apiSource
+            source = apiSource,
+            operation = stockOpMode.apiValue
         )
-        ScreenLog.d("[Upload]", "POST id=… value len=${trimmed.length} source=$apiSource")
+        ScreenLog.d(
+            "[Upload]",
+            "POST id=… value len=${trimmed.length} source=$apiSource op=${stockOpMode.apiValue ?: "-"}"
+        )
         return withContext(Dispatchers.IO) {
             try {
                 val service = ApiConfig.createRfidApiService(prefs)
