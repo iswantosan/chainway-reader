@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/titleApp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:paddingBottom="16dp"/>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardElevation="2dp"
+            app:cardCornerRadius="8dp"
+            android:layout_marginBottom="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Mode scan"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp"/>
+
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/modeToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:singleSelection="true"
+                    app:selectionRequired="true">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnModeBarcode"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/mode_barcode"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnModeRfid"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/mode_rfid"/>
+                </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                <TextView
+                    android:id="@+id/textActiveMode"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Mode aktif: BARCODE"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Barcode (keyboard wedge)"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp"/>
+        <EditText
+            android:id="@+id/editBarcode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/barcode_hint"
+            android:inputType="text"
+            android:imeOptions="actionDone"
+            android:maxLines="1"
+            android:layout_marginBottom="12dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="RFID terakhir"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp"/>
+        <TextView
+            android:id="@+id/textRfidLast"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/rfid_last"
+            android:padding="8dp"
+            android:background="?attr/selectableItemBackground"
+            android:layout_marginBottom="16dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginBottom="8dp">
+
+            <Button
+                android:id="@+id/btnClear"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/btn_clear"
+                android:layout_marginEnd="8dp"/>
+
+            <Button
+                android:id="@+id/btnSettings"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/btn_settings"
+                android:layout_marginStart="8dp"/>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/status_label"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp"/>
+        <TextView
+            android:id="@+id/textStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="-"
+            android:padding="8dp"
+            android:minHeight="40dp"
+            android:layout_marginBottom="16dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/log_title"
+                android:textStyle="bold"/>
+
+            <Button
+                android:id="@+id/btnCopyLog"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/btn_copy_log"/>
+        </LinearLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerLog"
+            android:layout_width="match_parent"
+            android:layout_height="240dp"
+            android:nestedScrollingEnabled="true"/>
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="accent">#03DAC5</color>
+    <color name="black">#FF000000</color>
+    <color name="primary">#6200EE</color>
+    <color name="primary_dark">#3700B3</color>
+    <color name="status_failed">#F44336</color>
+    <color name="status_local">#2196F3</color>
+    <color name="status_sent">#4CAF50</color>
+    <color name="white">#FFFFFFFF</color>
+    <string name="active_mode">Mode aktif: %1$s</string>
+    <string name="app_name">Stok Scanner</string>
+    <string name="barcode_hint">Hasil scan barcode</string>
+    <string name="base_url">Base URL</string>
+    <string name="btn_clear">Clear</string>
+    <string name="btn_copy_log">Copy log</string>
+    <string name="btn_save">Save</string>
+    <string name="btn_settings">Settings</string>
+    <string name="btn_test_connection">Test koneksi API</string>
+    <string name="endpoint_path">Endpoint path</string>
+    <string name="log_copied">Disalin ke clipboard</string>
+    <string name="log_empty">Log kosong</string>
+    <string name="log_title">Log Scan</string>
+    <string name="mode_barcode">BARCODE</string>
+    <string name="mode_rfid">RFID</string>
+    <string name="rfid_extra_key">RFID barcode/tag extra key</string>
+    <string name="rfid_intent_action">RFID intent action</string>
+    <string name="rfid_last">RFID terakhir: -</string>
+    <string name="settings_title">Settings</string>
+    <string name="static_token">Static token</string>
+    <string name="status_label">Status</string>
+    <string name="test_connection_fail">Gagal: %1$s</string>
+    <string name="test_connection_ok">Koneksi berhasil</string>
+    <string name="test_connection_running">Memeriksa…</string>
+    <style name="Theme.StokScanner" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryDark">@color/primary_dark</item>
+        <item name="colorAccent">@color/accent</item>
+    </style>
+</resources>
