@@ -484,7 +484,6 @@ class MainActivity : AppCompatActivity() {
                         return@runOnUiThread
                     }
                     if (parsed.success == true) {
-                        SoundHelper.playSuccess()
                         Snackbar.make(binding.root, getString(R.string.log_sent), Snackbar.LENGTH_SHORT).show()
                     } else {
                         SoundHelper.playError()

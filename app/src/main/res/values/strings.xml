@@ -15,7 +15,7 @@
     <string name="batch_send_done">Selesai: %1$d terkirim, %2$d gagal</string>
     <string name="log_debug_title">Log teknis</string>
     <string name="scan_result_title">Hasil scan</string>
-    <string name="scan_hint">Scan langsung (tanpa buka keyboard). Tahan kolom ini untuk ketik manual.</string>
+    <string name="scan_hint">Scan langsung</string>
     <string name="scan_last">Terakhir: %1$s</string>
     <string name="scan_last_empty">Terakhir: (belum ada)</string>
     <string name="scan_empty">Belum ada hasil scan</string>
