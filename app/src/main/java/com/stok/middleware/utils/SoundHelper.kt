@@ -12,10 +12,6 @@ object SoundHelper {
     fun playSuccess() { /* intentional no-op */ }
 
     fun playError() {
-        try {
-            val tg = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
-            tg.startTone(ToneGenerator.TONE_PROP_NACK, 400)
-            tg.release()
-        } catch (_: Exception) { }
+        /* intentional no-op */
     }
 }

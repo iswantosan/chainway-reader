@@ -36,11 +36,11 @@
         "source": "C:\\Users\\coinx\\.gradle\\daemon\\8.7\\com.stok.middleware.app-main-34:\\layout\\item_pending_scan.xml"
     },
     {
-        "merged": "C:\\Users\\coinx\\.gradle\\daemon\\8.7\\com.stok.middleware.app-debug-32:\\layout_activity_member_load.xml.flat",
-        "source": "C:\\Users\\coinx\\.gradle\\daemon\\8.7\\com.stok.middleware.app-main-34:\\layout\\activity_member_load.xml"
-    },
-    {
         "merged": "C:\\Users\\coinx\\.gradle\\daemon\\8.7\\com.stok.middleware.app-debug-32:\\drawable_ic_launcher.xml.flat",
         "source": "C:\\Users\\coinx\\.gradle\\daemon\\8.7\\com.stok.middleware.app-main-34:\\drawable\\ic_launcher.xml"
+    },
+    {
+        "merged": "C:\\Users\\coinx\\.gradle\\daemon\\8.7\\com.stok.middleware.app-debug-32:\\layout_activity_member_load.xml.flat",
+        "source": "C:\\Users\\coinx\\.gradle\\daemon\\8.7\\com.stok.middleware.app-main-34:\\layout\\activity_member_load.xml"
     }
 ]

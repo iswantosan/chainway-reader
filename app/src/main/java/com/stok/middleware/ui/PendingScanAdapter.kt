@@ -1,6 +1,7 @@
 package com.stok.middleware.ui
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
@@ -41,7 +42,12 @@ class PendingScanAdapter : ListAdapter<PendingScanRow, PendingScanAdapter.VH>(Di
                     (itemView.context.getString(R.string.pending_state_failed) + d) to R.color.status_failed
                 }
             }
-            binding.itemScanState.text = stateText
+            val safeStateText = stateText.ifBlank {
+                itemView.context.getString(R.string.pending_state_pending)
+            }
+            binding.itemScanState.visibility = View.VISIBLE
+            binding.itemScanState.alpha = 1f
+            binding.itemScanState.text = safeStateText
             binding.itemScanState.setTextColor(
                 ContextCompat.getColor(itemView.context, colorRes)
             )

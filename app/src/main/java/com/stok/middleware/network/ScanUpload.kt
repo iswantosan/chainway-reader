@@ -39,13 +39,22 @@ object ScanUpload {
                 val service = ApiConfig.createRfidApiService(prefs)
                 val url = ApiConfig.getRfidScanUrl(prefs)
                 val httpResp = service.sendRfidScan(url, payload)
-                val response = ApiResponseParser.parseRfidScanResponse(httpResp).getOrElse {
-                    return@withContext Result.failure(it)
+                val parsed = ApiResponseParser.parseRfidScanResponse(httpResp)
+                if (parsed.isSuccess) {
+                    val response = parsed.getOrThrow()
+                    val ok = response.success != false
+                    val msg = ApiUiMessages.normalizeApiMessage(response.message)
+                    if (!ok) Result.failure(IllegalStateException(msg))
+                    else Result.success(msg)
+                } else {
+                    // Beberapa backend tetap menyimpan data tapi body respons tidak sesuai parser.
+                    // Kalau HTTP sudah 2xx, tetap anggap sukses agar status UI konsisten dengan data server.
+                    if (httpResp.isSuccessful) {
+                        Result.success("Terkirim")
+                    } else {
+                        Result.failure(parsed.exceptionOrNull() ?: Exception("Error"))
+                    }
                 }
-                val ok = response.success != false
-                val msg = ApiUiMessages.normalizeApiMessage(response.message)
-                if (!ok) Result.failure(IllegalStateException(msg))
-                else Result.success(msg)
             } catch (e: Exception) {
                 val msg = when {
                     e.message?.contains("Unable to resolve host") == true -> "Tidak ada koneksi internet"

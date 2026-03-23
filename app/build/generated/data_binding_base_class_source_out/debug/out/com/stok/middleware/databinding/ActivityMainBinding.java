@@ -9,10 +9,10 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.ScrollView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
 import androidx.viewbinding.ViewBindings;
@@ -24,7 +24,7 @@ import java.lang.String;
 
 public final class ActivityMainBinding implements ViewBinding {
   @NonNull
-  private final ScrollView rootView;
+  private final NestedScrollView rootView;
 
   @NonNull
   public final Button btnClear;
@@ -83,7 +83,7 @@ public final class ActivityMainBinding implements ViewBinding {
   @NonNull
   public final TextView titleApp;
 
-  private ActivityMainBinding(@NonNull ScrollView rootView, @NonNull Button btnClear,
+  private ActivityMainBinding(@NonNull NestedScrollView rootView, @NonNull Button btnClear,
       @NonNull Button btnClearLastScan, @NonNull MaterialButton btnClearQueue,
       @NonNull Button btnCopyLastScan, @NonNull Button btnCopyLog, @NonNull Button btnSendLog,
       @NonNull MaterialButton btnSendScans, @NonNull Button btnSettings,
@@ -116,7 +116,7 @@ public final class ActivityMainBinding implements ViewBinding {
 
   @Override
   @NonNull
-  public ScrollView getRoot() {
+  public NestedScrollView getRoot() {
     return rootView;
   }
 
@@ -255,7 +255,7 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
-      return new ActivityMainBinding((ScrollView) rootView, btnClear, btnClearLastScan,
+      return new ActivityMainBinding((NestedScrollView) rootView, btnClear, btnClearLastScan,
           btnClearQueue, btnCopyLastScan, btnCopyLog, btnSendLog, btnSendScans, btnSettings,
           editBarcode, imgAppLogo, progressStatus, recyclerLog, recyclerPending, sectionScan,
           textLastScan, textQueueCount, textStatus, textVersion, titleApp);

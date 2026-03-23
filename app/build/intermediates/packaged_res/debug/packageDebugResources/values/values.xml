@@ -38,7 +38,7 @@
     <string name="rfid_extra_key">Kunci extra data RFID (biasanya data)</string>
     <string name="rfid_intent_action">RFID intent action</string>
     <string name="scan_empty">Belum ada hasil scan</string>
-    <string name="scan_hint">Scan langsung (tanpa buka keyboard). Tahan kolom ini untuk ketik manual.</string>
+    <string name="scan_hint">Scan langsung</string>
     <string name="scan_last">Terakhir: %1$s</string>
     <string name="scan_last_empty">Terakhir: (belum ada)</string>
     <string name="scan_queue_title">Antrean scan</string>

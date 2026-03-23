@@ -93,10 +93,13 @@ class MainActivity : AppCompatActivity() {
         }.launchIn(lifecycleScope)
 
         pendingAdapter = PendingScanAdapter()
-        binding.recyclerPending.layoutManager = LinearLayoutManager(this)
+        binding.recyclerPending.layoutManager = FullyExpandedLinearLayoutManager(this)
         binding.recyclerPending.adapter = pendingAdapter
         pendingScans.onEach { list ->
-            pendingAdapter.submitList(list)
+            pendingAdapter.submitList(list) {
+                // Setelah diff, paksa ukuran ulang supaya NestedScrollView tahu tinggi konten penuh
+                binding.recyclerPending.requestLayout()
+            }
             val n = list.count { it.state == PendingScanState.PENDING }
             binding.textQueueCount.text = getString(R.string.queue_count, n)
         }.launchIn(lifecycleScope)
