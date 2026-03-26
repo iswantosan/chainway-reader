@@ -400,25 +400,58 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun addPendingScan(rawValue: String, mode: ScanMode) {
-        val trimmed = rawValue.trim()
-        if (trimmed.isEmpty()) return
-        val ts = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
-        val row = PendingScanRow(
-            createdAt = ts,
-            value = trimmed,
-            mode = mode,
-            stockOpMode = currentStockMode,
-            state = PendingScanState.PENDING
-        )
-        pendingScans.update { listOf(row) + it }
-        lastScanValue = trimmed
-        binding.textLastScan.text = getString(R.string.scan_last, trimmed)
+        val parts = splitCombinedScanValues(rawValue)
+        if (parts.isEmpty()) return
+        val now = Date()
+        val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        val rows = parts.map { value ->
+            PendingScanRow(
+                createdAt = formatter.format(now),
+                value = value,
+                mode = mode,
+                stockOpMode = currentStockMode,
+                state = PendingScanState.PENDING
+            )
+        }
+        // Item terbaru tampil paling atas.
+        pendingScans.update { rows.asReversed() + it }
+        val last = parts.last()
+        lastScanValue = last
+        binding.textLastScan.text = getString(R.string.scan_last, last)
         if (mode == ScanMode.KEYBOARD) {
             binding.editBarcode.setText("")
         } else {
-            binding.editBarcode.setText(trimmed)
+            binding.editBarcode.setText(last)
         }
         binding.recyclerPending.post { binding.recyclerPending.smoothScrollToPosition(0) }
+    }
+
+    private fun splitCombinedScanValues(raw: String): List<String> {
+        val trimmed = raw.trim()
+        if (trimmed.isEmpty()) return emptyList()
+
+        // Prioritas delimiter umum dari scanner/wedge.
+        val byDelimiter = trimmed
+            .split(Regex("[\\r\\n,;\\t ]+"))
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+        if (byDelimiter.size > 1) return byDelimiter
+
+        // Fallback: beberapa scanner kirim EPC hex beruntun tanpa delimiter (umum 24-char EPC).
+        val compactHex = trimmed.uppercase(Locale.ROOT)
+        val isHex = compactHex.matches(Regex("[0-9A-F]+"))
+        if (isHex && compactHex.length >= 48 && compactHex.length % 24 == 0) {
+            return compactHex.chunked(24)
+        }
+
+        // Fallback lain: split saat prefix EPC mulai lagi (E + 3 hex).
+        val byPrefix = compactHex
+            .split(Regex("(?=E[0-9A-F]{3})"))
+            .map { it.trim() }
+            .filter { it.length >= 12 }
+        if (byPrefix.size > 1) return byPrefix
+
+        return listOf(trimmed)
     }
 
     private fun updatePendingRow(localId: String, transform: (PendingScanRow) -> PendingScanRow) {
