@@ -18,7 +18,9 @@ data class PendingScanRow(
     val mode: ScanMode,
     val stockOpMode: StockOpMode = StockOpMode.MASUK,
     val state: PendingScanState = PendingScanState.PENDING,
-    val serverMessage: String? = null
+    val serverMessage: String? = null,
+    /** Jumlah scan untuk tag/mode yang sama (gabung di antrean). */
+    val scanCount: Int = 1
 ) {
     /** 8 karakter pertama UUID untuk tampilan ringkas. */
     fun shortId(): String = localId.take(8)

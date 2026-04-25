@@ -28,6 +28,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.stok.middleware.R
 import com.stok.middleware.data.local.AppPreferences
+import com.stok.middleware.data.local.RfidNameCache
 import com.stok.middleware.data.local.ScanLogRepository
 import com.stok.middleware.data.model.LogExportPayload
 import com.stok.middleware.data.model.LogStatus
@@ -40,6 +41,7 @@ import com.stok.middleware.databinding.ActivityMainBinding
 import com.stok.middleware.scanner.BarcodeInputHandler
 import com.stok.middleware.network.ApiConfig
 import com.stok.middleware.network.OpnameCompareApi
+import com.stok.middleware.network.RfidMapSync
 import com.stok.middleware.network.ScanUpload
 import com.stok.middleware.scanner.ScannerManager
 import com.stok.middleware.utils.ScreenLog
@@ -78,6 +80,9 @@ class MainActivity : AppCompatActivity() {
     private val wedgeBuffer = StringBuilder()
     private var wedgeFlushRunnable: Runnable? = null
 
+    private val autoSendHandler = Handler(Looper.getMainLooper())
+    private var autoSendRunnable: Runnable? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -85,6 +90,7 @@ class MainActivity : AppCompatActivity() {
 
         val app = application as com.stok.middleware.StokScannerApp
         prefs = app.appPreferences
+        RfidNameCache.refreshFromPrefs(prefs)
         ScreenLog.sink = { tag, message -> addDebugLog(tag, message) }
         logRepository = ScanLogRepository(this)
 
@@ -114,6 +120,14 @@ class MainActivity : AppCompatActivity() {
 
         loadLogs()
 
+        lifecycleScope.launch {
+            RfidMapSync.sync(prefs).fold(
+                onSuccess = { },
+                onFailure = { }
+            )
+            runOnUiThread { RfidNameCache.refreshFromPrefs(prefs) }
+        }
+
         scannerManager = ScannerManager(
             context = this,
             prefs = prefs,
@@ -137,8 +151,9 @@ class MainActivity : AppCompatActivity() {
 
         barcodeHandler = BarcodeInputHandler(
             editText = binding.editBarcode,
-            onBarcodeScanned = { item ->
-                addPendingScan(item.value, ScanMode.KEYBOARD)
+            onScanCompleted = { value ->
+                val mode = if (prefs.wedgeAsRfid) ScanMode.RFID else ScanMode.KEYBOARD
+                addPendingScan(value, mode)
             }
         )
         barcodeHandler.attach()
@@ -184,6 +199,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        RfidNameCache.refreshFromPrefs(prefs)
         ScreenLog.d("[onResume]", "Reloading RFID config")
         scannerManager.reloadRfidConfig()
         binding.editBarcode.post { binding.editBarcode.requestFocus() }
@@ -216,6 +232,10 @@ class MainActivity : AppCompatActivity() {
             }
             R.id.menu_settings -> {
                 showSettingsPasswordDialog()
+                true
+            }
+            R.id.menu_sync_rfid_names -> {
+                syncRfidNamesFromMenu()
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -386,7 +406,7 @@ class MainActivity : AppCompatActivity() {
             val item = ScanLogItem(
                 id = 0L,
                 timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()),
-                mode = ScanMode.RFID,
+                mode = ScanMode.KEYBOARD,
                 value = tag,
                 status = LogStatus.LOCAL_ONLY,
                 detail = message
@@ -404,17 +424,36 @@ class MainActivity : AppCompatActivity() {
         if (parts.isEmpty()) return
         val now = Date()
         val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-        val rows = parts.map { value ->
-            PendingScanRow(
-                createdAt = formatter.format(now),
-                value = value,
-                mode = mode,
-                stockOpMode = currentStockMode,
-                state = PendingScanState.PENDING
-            )
+        val ts = formatter.format(now)
+
+        pendingScans.update { list ->
+            var acc = list
+            for (value in parts.asReversed()) {
+                val i = acc.indexOfFirst {
+                    it.value == value && it.mode == mode && it.stockOpMode == currentStockMode &&
+                        it.state == PendingScanState.PENDING
+                }
+                acc = if (i >= 0) {
+                    acc.toMutableList().apply {
+                        val row = this[i]
+                        this[i] = row.copy(scanCount = row.scanCount + 1, createdAt = ts)
+                    }
+                } else {
+                    listOf(
+                        PendingScanRow(
+                            createdAt = ts,
+                            value = value,
+                            mode = mode,
+                            stockOpMode = currentStockMode,
+                            state = PendingScanState.PENDING,
+                            scanCount = 1
+                        )
+                    ) + acc
+                }
+            }
+            acc
         }
-        // Item terbaru tampil paling atas.
-        pendingScans.update { rows.asReversed() + it }
+
         val last = parts.last()
         lastScanValue = last
         binding.textLastScan.text = getString(R.string.scan_last, last)
@@ -424,6 +463,59 @@ class MainActivity : AppCompatActivity() {
             binding.editBarcode.setText(last)
         }
         binding.recyclerPending.post { binding.recyclerPending.smoothScrollToPosition(0) }
+        scheduleDebouncedAutoSend()
+    }
+
+    private fun scheduleDebouncedAutoSend() {
+        if (!prefs.autoSendScans) return
+        if (currentStockMode == StockOpMode.OPNAME) return
+        autoSendRunnable?.let { autoSendHandler.removeCallbacks(it) }
+        autoSendRunnable = Runnable {
+            lifecycleScope.launch {
+                val rows = pendingScans.value.filter {
+                    it.state == PendingScanState.PENDING && it.stockOpMode != StockOpMode.OPNAME
+                }
+                if (rows.isEmpty()) return@launch
+                val (_, fail) = uploadPendingRows(rows)
+                runOnUiThread {
+                    if (fail > 0) {
+                        SoundHelper.playError()
+                        Snackbar.make(
+                            binding.root,
+                            getString(R.string.auto_send_has_failures),
+                            Snackbar.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            }
+        }
+        autoSendHandler.postDelayed(autoSendRunnable!!, 450L)
+    }
+
+    private fun syncRfidNamesFromMenu() {
+        lifecycleScope.launch {
+            val result = RfidMapSync.sync(prefs)
+            runOnUiThread {
+                result.fold(
+                    onSuccess = { n ->
+                        RfidNameCache.refreshFromPrefs(prefs)
+                        pendingAdapter.notifyDataSetChanged()
+                        Snackbar.make(
+                            binding.root,
+                            getString(R.string.sync_rfid_names_ok, n),
+                            Snackbar.LENGTH_SHORT
+                        ).show()
+                    },
+                    onFailure = { e ->
+                        Snackbar.make(
+                            binding.root,
+                            getString(R.string.sync_rfid_names_fail, e.message ?: "Error"),
+                            Snackbar.LENGTH_LONG
+                        ).show()
+                    }
+                )
+            }
+        }
     }
 
     private fun splitCombinedScanValues(raw: String): List<String> {
@@ -473,35 +565,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnSendScans.isEnabled = false
         setApiLoading(true)
         lifecycleScope.launch {
-            var ok = 0
-            var fail = 0
-            for (row in toSend) {
-                updatePendingRow(row.localId) { it.copy(state = PendingScanState.SENDING) }
-                val apiSource = when (row.mode) {
-                    ScanMode.KEYBOARD -> "barcode"
-                    ScanMode.RFID -> "rfid"
-                }
-                val result = ScanUpload.upload(
-                    prefs = prefs,
-                    value = row.value,
-                    apiSource = apiSource,
-                    stockOpMode = row.stockOpMode
-                )
-                result.fold(
-                    onSuccess = { msg ->
-                        ok++
-                        updatePendingRow(row.localId) {
-                            it.copy(state = PendingScanState.SENT, serverMessage = msg)
-                        }
-                    },
-                    onFailure = { e ->
-                        fail++
-                        updatePendingRow(row.localId) {
-                            it.copy(state = PendingScanState.FAILED, serverMessage = e.message)
-                        }
-                    }
-                )
-            }
+            val (ok, fail) = uploadPendingRows(toSend)
             runOnUiThread {
                 binding.btnSendScans.isEnabled = true
                 setApiLoading(false)
@@ -513,6 +577,56 @@ class MainActivity : AppCompatActivity() {
                 if (fail > 0) SoundHelper.playError()
             }
         }
+    }
+
+    /** @return Pair(jumlah baris sukses, jumlah baris gagal) */
+    private suspend fun uploadPendingRows(rows: List<PendingScanRow>): Pair<Int, Int> {
+        var ok = 0
+        var fail = 0
+        for (row in rows) {
+            updatePendingRow(row.localId) { it.copy(state = PendingScanState.SENDING) }
+            val apiSource = when (row.mode) {
+                ScanMode.KEYBOARD -> "barcode"
+                ScanMode.RFID -> "rfid"
+            }
+            var lastMsg: String? = null
+            var failed = false
+            for (_attempt in 1..row.scanCount) {
+                val result = ScanUpload.upload(
+                    prefs = prefs,
+                    value = row.value,
+                    apiSource = apiSource,
+                    stockOpMode = row.stockOpMode
+                )
+                result.fold(
+                    onSuccess = { msg -> lastMsg = msg },
+                    onFailure = { e ->
+                        failed = true
+                        updatePendingRow(row.localId) {
+                            it.copy(
+                                state = PendingScanState.FAILED,
+                                serverMessage = e.message,
+                                scanCount = row.scanCount
+                            )
+                        }
+                    }
+                )
+                if (failed) break
+            }
+            if (!failed) {
+                ok++
+                updatePendingRow(row.localId) {
+                    it.copy(
+                        state = PendingScanState.SENT,
+                        serverMessage = lastMsg,
+                        scanCount = 1
+                    )
+                }
+            } else {
+                fail++
+            }
+        }
+        return ok to fail
     }
 
     private fun runOpnameCompare() {

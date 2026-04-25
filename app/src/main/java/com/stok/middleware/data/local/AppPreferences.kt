@@ -37,6 +37,24 @@ class AppPreferences(context: Context) {
         get() = prefs.getString(KEY_RFID_EXTRA_KEY, DEFAULT_RFID_EXTRA_KEY) ?: DEFAULT_RFID_EXTRA_KEY
         set(value) = prefs.edit().putString(KEY_RFID_EXTRA_KEY, value).apply()
 
+    /** Otomatis kirim antrean ke server setelah scan (debounce). */
+    var autoSendScans: Boolean
+        get() = prefs.getBoolean(KEY_AUTO_SEND, true)
+        set(value) = prefs.edit().putBoolean(KEY_AUTO_SEND, value).apply()
+
+    /**
+     * Jika true, input dari kolom scan (keyboard wedge) dilaporkan sebagai RFID ke API/UI.
+     * Aktifkan bila reader RFID mengisi kolom yang sama dengan barcode.
+     */
+    var wedgeAsRfid: Boolean
+        get() = prefs.getBoolean(KEY_WEDGE_AS_RFID, false)
+        set(value) = prefs.edit().putBoolean(KEY_WEDGE_AS_RFID, value).apply()
+
+    /** JSON object string: tag_id -> nama produk. */
+    var rfidNameMapJson: String
+        get() = prefs.getString(KEY_RFID_NAME_MAP, "{}") ?: "{}"
+        set(value) = prefs.edit().putString(KEY_RFID_NAME_MAP, value).apply()
+
     companion object {
         private const val PREFS_NAME = "stok_scanner_prefs"
         private const val KEY_BASE_URL = "base_url"
@@ -45,6 +63,9 @@ class AppPreferences(context: Context) {
         private const val KEY_STATIC_TOKEN = "static_token"
         private const val KEY_RFID_INTENT_ACTION = "rfid_intent_action"
         private const val KEY_RFID_EXTRA_KEY = "rfid_extra_key"
+        private const val KEY_AUTO_SEND = "auto_send_scans"
+        private const val KEY_WEDGE_AS_RFID = "wedge_as_rfid"
+        private const val KEY_RFID_NAME_MAP = "rfid_name_map_json"
 
         const val DEFAULT_BASE_URL = "https://pttetragi.com/public"
         const val DEFAULT_ENDPOINT_PATH = "api/rfid/scan"

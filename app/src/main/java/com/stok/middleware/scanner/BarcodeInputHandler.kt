@@ -6,11 +6,6 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.KeyEvent
 import android.widget.EditText
-import com.stok.middleware.data.model.ScanLogItem
-import com.stok.middleware.data.model.ScanMode
-import com.stok.middleware.data.model.LogStatus
-import java.text.SimpleDateFormat
-import java.util.*
 
 /**
  * Deteksi input scan dari keyboard wedge:
@@ -20,10 +15,9 @@ import java.util.*
  */
 class BarcodeInputHandler(
     private val editText: EditText,
-    private val onBarcodeScanned: (ScanLogItem) -> Unit
+    private val onScanCompleted: (String) -> Unit
 ) {
 
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
     private val handler = Handler(Looper.getMainLooper())
     private var pendingRunnable: Runnable? = null
 
@@ -78,14 +72,7 @@ class BarcodeInputHandler(
     }
 
     private fun processScan(value: String) {
-        val item = ScanLogItem(
-            id = 0L,
-            timestamp = dateFormat.format(Date()),
-            mode = ScanMode.KEYBOARD,
-            value = value,
-            status = LogStatus.LOCAL_ONLY
-        )
-        onBarcodeScanned(item)
+        onScanCompleted(value)
     }
 
     fun clear() {

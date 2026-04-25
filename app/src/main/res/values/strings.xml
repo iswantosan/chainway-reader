@@ -60,4 +60,10 @@
     <string name="test_connection_running">Memeriksa koneksi…</string>
     <string name="status_loading_scan">Mengirim scan…</string>
     <string name="status_loading_log">Mengirim log…</string>
+    <string name="menu_sync_rfid_names">Sinkron nama RFID dari server</string>
+    <string name="sync_rfid_names_ok">Peta RFID: %1$d tag</string>
+    <string name="sync_rfid_names_fail">Sinkron RFID gagal: %1$s</string>
+    <string name="auto_send_has_failures">Auto-kirim: ada scan yang gagal — cek antrean (merah)</string>
+    <string name="setting_auto_send">Kirim otomatis ke server setelah scan</string>
+    <string name="setting_wedge_as_rfid">Input kolom scan = RFID (bukan barcode)</string>
 </resources>

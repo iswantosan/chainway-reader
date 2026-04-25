@@ -39,6 +39,8 @@ class SettingsActivity : AppCompatActivity() {
         binding.editStaticToken.setText(prefs.staticToken)
         binding.editRfidIntentAction.setText(prefs.rfidIntentAction)
         binding.editRfidExtraKey.setText(prefs.rfidExtraKey)
+        binding.switchAutoSend.isChecked = prefs.autoSendScans
+        binding.switchWedgeAsRfid.isChecked = prefs.wedgeAsRfid
 
         binding.btnSave.setOnClickListener { save() }
         binding.btnTestConnection.setOnClickListener { testConnection() }
@@ -91,6 +93,8 @@ class SettingsActivity : AppCompatActivity() {
         prefs.rfidExtraKey = binding.editRfidExtraKey.text.toString().trim().ifBlank {
             AppPreferences.DEFAULT_RFID_EXTRA_KEY
         }
+        prefs.autoSendScans = binding.switchAutoSend.isChecked
+        prefs.wedgeAsRfid = binding.switchWedgeAsRfid.isChecked
         finish()
     }
 }

@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.stok.middleware.R
+import com.stok.middleware.data.local.RfidNameCache
 import com.stok.middleware.data.model.PendingScanRow
 import com.stok.middleware.data.model.PendingScanState
 import com.stok.middleware.data.model.ScanMode
@@ -28,7 +29,13 @@ class PendingScanAdapter : ListAdapter<PendingScanRow, PendingScanAdapter.VH>(Di
         fun bind(row: PendingScanRow) {
             binding.itemScanId.text = "#${row.shortId()}"
             binding.itemScanTime.text = row.createdAt
-            binding.itemScanValue.text = row.value
+            val productName = RfidNameCache.nameForTag(row.value)
+            val countSuffix = if (row.scanCount > 1) " ×${row.scanCount}" else ""
+            binding.itemScanValue.text = if (productName != row.value) {
+                "${productName}${countSuffix}\n${row.value}"
+            } else {
+                "${row.value}${countSuffix}"
+            }
             val sourceLabel = when (row.mode) {
                 ScanMode.KEYBOARD -> "KEYBOARD"
                 ScanMode.RFID -> "RFID"

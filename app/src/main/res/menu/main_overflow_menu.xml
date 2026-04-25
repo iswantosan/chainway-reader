@@ -13,6 +13,11 @@
         app:showAsAction="never" />
 
     <item
+        android:id="@+id/menu_sync_rfid_names"
+        android:title="@string/menu_sync_rfid_names"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/menu_settings"
         android:title="@string/btn_settings"
         app:showAsAction="never" />
