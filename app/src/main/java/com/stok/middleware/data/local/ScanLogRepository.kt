@@ -41,6 +41,11 @@ class ScanLogRepository(context: Context) {
         prefs.edit().remove(KEY_LOGS).apply()
     }
 
+    /** Persist seluruh snapshot. Dipanggil debounced dari MainActivity. */
+    fun saveAll(list: List<ScanLogItem>) {
+        saveLogs(list)
+    }
+
     private fun saveLogs(list: List<ScanLogItem>) {
         val json = gson.toJson(list)
         prefs.edit().putString(KEY_LOGS, json).apply()

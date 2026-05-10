@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:descendantFocusability="afterDescendants">
+    android:descendantFocusability="beforeDescendants">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -27,181 +27,83 @@
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp"/>
 
-            <EditText
-                android:id="@+id/editBarcode"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="@string/scan_hint"
-                android:inputType="text"
-                android:imeOptions="actionDone"
-                android:maxLines="1"
-                android:focusable="true"
-                android:focusableInTouchMode="true"
-                android:layout_marginBottom="8dp"/>
-
             <LinearLayout
-                android:id="@+id/rowLastScan"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:visibility="gone">
+                android:background="#3A3A3A"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="10dp">
 
                 <TextView
-                    android:id="@+id/textLastScan"
+                    android:id="@+id/textHeaderTagId"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="@string/scan_last_empty"
-                    android:padding="8dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:focusable="false"
-                    android:clickable="false"/>
+                    android:textColor="#E53935"
+                    android:textStyle="bold"
+                    android:textSize="14sp"/>
 
-                <Button
-                    android:id="@+id/btnCopyLastScan"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="wrap_content"
+                <TextView
+                    android:id="@+id/textHeaderCount"
+                    android:layout_width="120dp"
                     android:layout_height="wrap_content"
-                    android:text="@string/btn_copy"/>
+                    android:gravity="end|center_vertical"
+                    android:textColor="#E53935"
+                    android:textStyle="bold"
+                    android:textSize="14sp"/>
+            </LinearLayout>
 
-                <Button
-                    android:id="@+id/btnClearLastScan"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="wrap_content"
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerPending"
+                android:layout_width="match_parent"
+                android:layout_height="280dp"
+                android:scrollbars="vertical"
+                android:fadeScrollbars="false"
+                android:background="@android:drawable/editbox_background_normal"/>
+
+            <TextView
+                android:id="@+id/textPendingEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:textColor="?android:attr/textColorSecondary"
+                android:padding="12dp"
+                android:text="@string/pending_area_empty"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSendBatch"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="@string/btn_clear"/>
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:text="@string/btn_send_batch"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnClearPending"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:text="@string/btn_clear_pending"/>
             </LinearLayout>
         </LinearLayout>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/mode_title"
-            android:textStyle="bold"
-            android:layout_marginBottom="6dp"/>
-
-        <com.google.android.material.button.MaterialButtonToggleGroup
-            android:id="@+id/toggleStockMode"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:singleSelection="true"
-            app:selectionRequired="true">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnModeMasuk"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:maxLines="2"
-                android:ellipsize="none"
-                android:textAllCaps="false"
-                android:gravity="center"
-                android:text="@string/mode_masuk"/>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnModeKeluar"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:maxLines="2"
-                android:ellipsize="none"
-                android:textAllCaps="false"
-                android:gravity="center"
-                android:text="@string/mode_keluar"/>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnModeOpname"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:maxLines="2"
-                android:ellipsize="none"
-                android:textAllCaps="false"
-                android:gravity="center"
-                android:text="@string/mode_opname"/>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnModeReadonly"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:maxLines="2"
-                android:ellipsize="none"
-                android:textAllCaps="false"
-                android:gravity="center"
-                android:text="@string/mode_readonly"/>
-        </com.google.android.material.button.MaterialButtonToggleGroup>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/scan_queue_title"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp"/>
-
-        <TextView
-            android:id="@+id/textQueueCount"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="13sp"
-            android:textColor="?android:attr/textColorSecondary"
-            android:layout_marginBottom="8dp"
-            android:text="@string/queue_count_initial"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="8dp">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSendScans"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="6dp"
-                android:text="@string/btn_send_scans"/>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnClearQueue"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="6dp"
-                android:text="@string/btn_clear_queue"/>
-        </LinearLayout>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnOpnameCompare"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:visibility="gone"
-            android:text="@string/btn_opname_compare"/>
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recyclerPending"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:nestedScrollingEnabled="false"
-            android:overScrollMode="never"
-            android:focusable="false"
-            android:focusableInTouchMode="false"
-            android:layout_marginBottom="12dp"/>
 
         <LinearLayout
             android:id="@+id/sectionLog"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:visibility="gone">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -218,13 +120,6 @@
                     android:textStyle="bold"/>
 
                 <Button
-                    android:id="@+id/btnSendLog"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/btn_send_log"/>
-
-                <Button
                     android:id="@+id/btnCopyLog"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="wrap_content"
@@ -235,7 +130,7 @@
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerLog"
                 android:layout_width="match_parent"
-                android:layout_height="160dp"
+                android:layout_height="240dp"
                 android:nestedScrollingEnabled="false"
                 android:focusable="false"
                 android:focusableInTouchMode="false"/>

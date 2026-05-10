@@ -4,8 +4,6 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -13,75 +11,80 @@ import android.util.TypedValue
 import android.view.KeyEvent
 import android.view.Menu
 import android.view.MenuItem
-import android.view.ViewGroup
 import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
-import android.widget.LinearLayout
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import android.widget.EditText
+import android.widget.LinearLayout
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.material.snackbar.Snackbar
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.snackbar.Snackbar
 import com.stok.middleware.R
 import com.stok.middleware.data.local.AppPreferences
-import com.stok.middleware.data.local.RfidNameCache
 import com.stok.middleware.data.local.ScanLogRepository
-import com.stok.middleware.data.model.LogExportPayload
 import com.stok.middleware.data.model.LogStatus
-import com.stok.middleware.data.model.PendingScanRow
-import com.stok.middleware.data.model.PendingScanState
 import com.stok.middleware.data.model.ScanLogItem
 import com.stok.middleware.data.model.ScanMode
-import com.stok.middleware.data.model.StockOpMode
 import com.stok.middleware.databinding.ActivityMainBinding
-import com.stok.middleware.scanner.BarcodeInputHandler
-import com.stok.middleware.network.ApiConfig
-import com.stok.middleware.network.OpnameCompareApi
-import com.stok.middleware.network.RfidMapSync
-import com.stok.middleware.network.ScanUpload
+import com.stok.middleware.network.SheetsApi
 import com.stok.middleware.scanner.ScannerManager
+import com.stok.middleware.ui.settings.SettingsActivity
 import com.stok.middleware.utils.ScreenLog
 import com.stok.middleware.utils.SoundHelper
-import com.stok.middleware.ui.settings.SettingsActivity
-import retrofit2.HttpException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
     companion object {
-        /** Sama seperti [BarcodeInputHandler]: akhir burst scan tanpa Enter. */
+        /** Akhir burst scan tanpa Enter saat fokus tidak di EditText apapun. */
         private const val WEDGE_IDLE_MS = 250L
+
+        /** Maks jumlah log yang disimpan di memori (dan di-persist). */
+        private const val LOG_CAP = 500
+
+        /** Delay debounce sebelum persist log ke disk. */
+        private const val LOG_PERSIST_DEBOUNCE_MS = 2000L
+
+        /** Throttle pemanggilan submitList ke pending recycler — hindari beban DiffUtil
+         *  untuk scan kencang. UI update di-batch tiap interval ini. */
+        private const val PENDING_RENDER_THROTTLE_MS = 80L
     }
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var prefs: AppPreferences
     private lateinit var logRepository: ScanLogRepository
     private lateinit var scannerManager: ScannerManager
-    private lateinit var barcodeHandler: BarcodeInputHandler
     private lateinit var logAdapter: ScanLogAdapter
-    private lateinit var pendingAdapter: PendingScanAdapter
+    private lateinit var pendingAdapter: PendingRowAdapter
 
-    private var lastScanValue: String = ""
-    private var currentStockMode: StockOpMode = StockOpMode.MASUK
+    /** Order-preserving map RFID -> total scan dalam session. */
+    private val pending = MutableStateFlow<LinkedHashMap<String, Int>>(LinkedHashMap())
     private var isLogVisible: Boolean = false
     private val logListFlow = MutableStateFlow<List<ScanLogItem>>(emptyList())
-    private val pendingScans = MutableStateFlow<List<PendingScanRow>>(emptyList())
 
-    /** Buffer wedge saat fokus bukan di kolom scan (tombol/list mengambil fokus). */
+    /** Buffer wedge keyboard. */
     private val wedgeHandler = Handler(Looper.getMainLooper())
     private val wedgeBuffer = StringBuilder()
     private var wedgeFlushRunnable: Runnable? = null
 
-    private val autoSendHandler = Handler(Looper.getMainLooper())
-    private var autoSendRunnable: Runnable? = null
+    /** Debounce persist log ke disk supaya scan kencang tidak ke-block I/O. */
+    private val persistHandler = Handler(Looper.getMainLooper())
+    private var persistRunnable: Runnable? = null
+
+    /** Throttle render pending list. */
+    private val renderHandler = Handler(Looper.getMainLooper())
+    private var renderScheduled = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -90,120 +93,55 @@ class MainActivity : AppCompatActivity() {
 
         val app = application as com.stok.middleware.StokScannerApp
         prefs = app.appPreferences
-        RfidNameCache.refreshFromPrefs(prefs)
         ScreenLog.sink = { tag, message -> addDebugLog(tag, message) }
         logRepository = ScanLogRepository(this)
+
+        pendingAdapter = PendingRowAdapter()
+        binding.recyclerPending.layoutManager = LinearLayoutManager(this)
+        binding.recyclerPending.adapter = pendingAdapter
 
         logAdapter = ScanLogAdapter(onCopyItem = { item ->
             copyToClipboard(ScanLogAdapter.formatLogLine(item))
         })
         binding.recyclerLog.layoutManager = LinearLayoutManager(this)
         binding.recyclerLog.adapter = logAdapter
-        binding.sectionLog.visibility = View.GONE
-        binding.recyclerLog.visibility = View.GONE
 
-        logListFlow.onEach { list ->
-            logAdapter.submitList(list)
-        }.launchIn(lifecycleScope)
+        logListFlow.onEach { list -> logAdapter.submitList(list) }
+            .launchIn(lifecycleScope)
 
-        pendingAdapter = PendingScanAdapter()
-        binding.recyclerPending.layoutManager = FullyExpandedLinearLayoutManager(this)
-        binding.recyclerPending.adapter = pendingAdapter
-        pendingScans.onEach { list ->
-            pendingAdapter.submitList(list) {
-                // Setelah diff, paksa ukuran ulang supaya NestedScrollView tahu tinggi konten penuh
-                binding.recyclerPending.requestLayout()
-            }
-            val n = list.count { it.state == PendingScanState.PENDING }
-            binding.textQueueCount.text = getString(R.string.queue_count, n)
-        }.launchIn(lifecycleScope)
+        pending.onEach { scheduleRenderPending() }
+            .launchIn(lifecycleScope)
 
         loadLogs()
-
-        lifecycleScope.launch {
-            RfidMapSync.sync(prefs).fold(
-                onSuccess = { },
-                onFailure = { }
-            )
-            runOnUiThread { RfidNameCache.refreshFromPrefs(prefs) }
-        }
 
         scannerManager = ScannerManager(
             context = this,
             prefs = prefs,
             rfidCallback = { epc ->
-                ScreenLog.d("[rfidCallback]", "ENTRY — epc length=${epc.length}, epc='${epc.take(50)}${if (epc.length > 50) "…" else ""}'")
-                try {
-                    runOnUiThread {
-                        try {
-                            ScreenLog.d("[rfidCallback]", "on UiThread — enqueue only (no API)")
-                            addPendingScan(epc, ScanMode.RFID)
-                        } catch (e: Exception) {
-                            ScreenLog.e("[rfidCallback]", "EXCEPTION on UiThread", e)
-                            throw e
-                        }
-                    }
-                } catch (e: Exception) {
-                    ScreenLog.e("[rfidCallback]", "EXCEPTION", e)
-                }
+                // Sengaja TIDAK log per broadcast — itu yang bikin scan kencang ngerasa lambat
+                // (setiap log entry = submitList + DiffUtil + persist debounce trigger).
+                // Untuk debug, aktifkan dengan toggle log section + scan manual.
+                runOnUiThread { handleScan(epc) }
             }
         )
 
-        barcodeHandler = BarcodeInputHandler(
-            editText = binding.editBarcode,
-            onScanCompleted = { value ->
-                val mode = if (prefs.wedgeAsRfid) ScanMode.RFID else ScanMode.KEYBOARD
-                addPendingScan(value, mode)
-            }
-        )
-        barcodeHandler.attach()
-        binding.editBarcode.showSoftInputOnFocus = false
-
-        binding.editBarcode.setOnFocusChangeListener { v, hasFocus ->
-            val et = v as EditText
-            et.showSoftInputOnFocus = false
-            if (hasFocus) hideSoftKeyboard(et)
-        }
-        binding.editBarcode.setOnClickListener {
-            binding.editBarcode.showSoftInputOnFocus = false
-            hideSoftKeyboard(binding.editBarcode)
-        }
-
+        binding.btnSendBatch.setOnClickListener { sendBatch() }
+        binding.btnClearPending.setOnClickListener { clearPending() }
         binding.btnCopyLog.setOnClickListener { copyFullLog() }
-        binding.btnSendLog.setOnClickListener { sendFullLog() }
-        binding.btnCopyLastScan.setOnClickListener { copyLastScanValue() }
-        binding.btnClearLastScan.setOnClickListener { clearLastScanValue() }
-        binding.btnSendScans.setOnClickListener { sendPendingBatch() }
-        binding.btnClearQueue.setOnClickListener { clearPendingQueue() }
-        binding.btnOpnameCompare.setOnClickListener { runOpnameCompare() }
 
-        binding.toggleStockMode.check(binding.btnModeMasuk.id)
-        binding.toggleStockMode.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (!isChecked) return@addOnButtonCheckedListener
-            currentStockMode = when (checkedId) {
-                R.id.btnModeKeluar -> StockOpMode.KELUAR
-                R.id.btnModeOpname -> StockOpMode.OPNAME
-                R.id.btnModeReadonly -> StockOpMode.READONLY
-                else -> StockOpMode.MASUK
-            }
-            updateModeUi()
-        }
-        updateModeUi()
-
-        binding.editBarcode.post { binding.editBarcode.requestFocus() }
-        hideSoftKeyboard(binding.editBarcode)
-        logRfidPermissionAndConfig()
         ScreenLog.d("[onCreate]", "Registering RFID receiver — action=${scannerManager.getRfidIntentAction()}, extraKey=${scannerManager.getRfidExtraKey()}")
         scannerManager.registerRfidReceiver()
+
+        if (prefs.sheetsUrl.isBlank() || prefs.sheetsToken.isBlank()) {
+            Snackbar.make(binding.root, getString(R.string.sheets_url_not_set), Snackbar.LENGTH_LONG).show()
+        }
     }
 
     override fun onResume() {
         super.onResume()
-        RfidNameCache.refreshFromPrefs(prefs)
         ScreenLog.d("[onResume]", "Reloading RFID config")
         scannerManager.reloadRfidConfig()
-        binding.editBarcode.post { binding.editBarcode.requestFocus() }
-        hideSoftKeyboard(binding.editBarcode)
+        hideAllSoftKeyboards()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -222,7 +160,6 @@ class MainActivity : AppCompatActivity() {
             R.id.menu_toggle_log -> {
                 isLogVisible = !isLogVisible
                 binding.sectionLog.visibility = if (isLogVisible) View.VISIBLE else View.GONE
-                binding.recyclerLog.visibility = if (isLogVisible) View.VISIBLE else View.GONE
                 invalidateOptionsMenu()
                 true
             }
@@ -234,26 +171,20 @@ class MainActivity : AppCompatActivity() {
                 showSettingsPasswordDialog()
                 true
             }
-            R.id.menu_sync_rfid_names -> {
-                syncRfidNamesFromMenu()
-                true
-            }
             else -> super.onOptionsItemSelected(item)
         }
     }
 
     /**
-     * Keyboard wedge mengirim key ke view yang fokus. Kalau fokus di tombol/list, kita tangkap di sini
-     * (tanpa perlu keyboard layar / IME).
+     * Capture wedge keyboard di Activity level (tidak ada EditText fokus).
+     * Receiver RFID broadcast jalan paralel via [ScannerManager].
      */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (!::binding.isInitialized) return super.dispatchKeyEvent(event)
 
-        val et = binding.editBarcode
-        if (et.hasFocus()) return super.dispatchKeyEvent(event)
-
+        // Kalau kebetulan ada EditText lain (mis. dialog), biarkan event lewat.
         val focus = currentFocus
-        if (focus is EditText && focus !== et) {
+        if (focus is EditText) {
             return super.dispatchKeyEvent(event)
         }
 
@@ -358,163 +289,180 @@ class MainActivity : AppCompatActivity() {
         wedgeBuffer.clear()
         val value = raw.trim()
         if (value.isEmpty()) return
-        addPendingScan(value, ScanMode.KEYBOARD)
+        handleScan(value)
     }
 
-    private fun clearWedgeBuffer() {
-        cancelWedgeDebounce()
-        wedgeBuffer.clear()
-    }
-
-    private fun updateModeUi() {
-        val modeText = when (currentStockMode) {
-            StockOpMode.MASUK -> getString(R.string.mode_masuk)
-            StockOpMode.KELUAR -> getString(R.string.mode_keluar)
-            StockOpMode.OPNAME -> getString(R.string.mode_opname)
-            StockOpMode.READONLY -> getString(R.string.mode_readonly)
-        }
-        supportActionBar?.subtitle = "Mode: $modeText"
-        binding.btnOpnameCompare.visibility = if (currentStockMode == StockOpMode.OPNAME) {
-            View.VISIBLE
-        } else {
-            View.GONE
-        }
-    }
-
-    private fun hideSoftKeyboard(view: View) {
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager ?: return
-        imm.hideSoftInputFromWindow(view.windowToken, 0)
+    override fun onPause() {
+        super.onPause()
+        flushPersistNow()
     }
 
     override fun onDestroy() {
         ScreenLog.d("[onDestroy]", "Unregistering RFID receiver")
         scannerManager.unregisterRfidReceiver()
         ScreenLog.sink = null
+        flushPersistNow()
         super.onDestroy()
     }
 
-    private fun addLogAndRefresh(item: ScanLogItem) {
-        lifecycleScope.launch {
-            logRepository.addLog(item)
-            loadLogs()
-            binding.recyclerLog.post { binding.recyclerLog.smoothScrollToPosition(0) }
+    /**
+     * Setiap nilai scan masuk: split kalau gabungan, lalu tiap RFID di-increment di [pending].
+     * Tidak menulis log per-scan supaya scan kencang tidak terbebani I/O — pending list di UI
+     * sudah jadi feedback visual yang cukup.
+     */
+    private fun handleScan(rawValue: String) {
+        val parts = splitCombinedScanValues(rawValue)
+        if (parts.isEmpty()) return
+        pending.update { current ->
+            val next = LinkedHashMap(current)
+            for (v in parts) {
+                next[v] = (next[v] ?: 0) + 1
+            }
+            next
         }
     }
 
-    private fun addDebugLog(tag: String, message: String) {
-        runOnUiThread {
-            val item = ScanLogItem(
-                id = 0L,
-                timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()),
-                mode = ScanMode.KEYBOARD,
-                value = tag,
-                status = LogStatus.LOCAL_ONLY,
-                detail = message
-            )
-            addLogAndRefresh(item)
+    /**
+     * Render pending list di-throttle agar saat scan kencang DiffUtil tidak dipanggil per scan.
+     * State [pending] tetap update sinkron — UI catch up dalam [PENDING_RENDER_THROTTLE_MS].
+     */
+    private fun scheduleRenderPending() {
+        if (renderScheduled) return
+        renderScheduled = true
+        renderHandler.postDelayed({
+            renderScheduled = false
+            doRenderPending(pending.value)
+        }, PENDING_RENDER_THROTTLE_MS)
+    }
+
+    private fun doRenderPending(map: LinkedHashMap<String, Int>) {
+        val totalRfid = map.size
+        val totalScan = map.values.sum()
+        binding.textHeaderTagId.text = getString(R.string.header_tag_id, totalRfid)
+        binding.textHeaderCount.text = getString(R.string.header_count, totalScan)
+        val rows = map.entries.map { PendingRow(it.key, it.value) }
+        pendingAdapter.submitList(rows)
+        binding.textPendingEmpty.visibility = if (rows.isEmpty()) View.VISIBLE else View.GONE
+        binding.recyclerPending.visibility = if (rows.isEmpty()) View.GONE else View.VISIBLE
+    }
+
+    private fun sendBatch() {
+        val snapshot = pending.value
+        if (snapshot.isEmpty()) {
+            Snackbar.make(binding.root, getString(R.string.batch_empty), Snackbar.LENGTH_SHORT).show()
+            return
         }
+        if (prefs.sheetsUrl.isBlank() || prefs.sheetsToken.isBlank()) {
+            Snackbar.make(binding.root, getString(R.string.sheets_url_not_set), Snackbar.LENGTH_LONG).show()
+            return
+        }
+        val items: List<Pair<String, Int>> = snapshot.entries.map { it.key to it.value }
+        binding.btnSendBatch.isEnabled = false
+        Snackbar.make(binding.root, getString(R.string.batch_send_running, items.size), Snackbar.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            val result = SheetsApi.appendBatch(prefs, items)
+            binding.btnSendBatch.isEnabled = true
+            result.fold(
+                onSuccess = { detail ->
+                    addLogAndRefresh(makeLog("BATCH", LogStatus.SENT, detail))
+                    // Hapus dari antrean hanya RFID yang ikut dikirim — kalau user scan baru saat
+                    // request berlangsung, scan barunya tidak ikut hilang.
+                    pending.update { current ->
+                        val next = LinkedHashMap(current)
+                        for (key in snapshot.keys) {
+                            val sent = snapshot[key] ?: 0
+                            val now = next[key] ?: 0
+                            val remaining = now - sent
+                            if (remaining <= 0) next.remove(key) else next[key] = remaining
+                        }
+                        next
+                    }
+                    val parts = detail.split(",").joinToString("  •  ") { it.trim() }
+                    Snackbar.make(binding.root, parts, Snackbar.LENGTH_LONG).show()
+                },
+                onFailure = { e ->
+                    val msg = e.message ?: "Error"
+                    SoundHelper.playError()
+                    addLogAndRefresh(makeLog("BATCH", LogStatus.FAILED, msg))
+                    Snackbar.make(binding.root, getString(R.string.batch_send_fail, msg), Snackbar.LENGTH_LONG).show()
+                }
+            )
+        }
+    }
+
+    private fun clearPending() {
+        pending.value = LinkedHashMap()
+    }
+
+    private fun makeLog(value: String, status: LogStatus, detail: String?): ScanLogItem {
+        val ts = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        return ScanLogItem(
+            id = 0L,
+            timestamp = ts,
+            mode = ScanMode.RFID,
+            value = value,
+            status = status,
+            detail = detail
+        )
+    }
+
+    /**
+     * In-memory append + debounced disk persist. Tidak boleh blok scan kencang.
+     * Cap [LOG_CAP] agar list tidak tumbuh tak terbatas.
+     */
+    private fun addLogAndRefresh(item: ScanLogItem) {
+        val withId = item.copy(id = System.nanoTime())
+        logListFlow.update { current ->
+            val next = ArrayList<ScanLogItem>(minOf(current.size + 1, LOG_CAP))
+            next.add(withId)
+            for (i in 0 until current.size) {
+                if (next.size >= LOG_CAP) break
+                next.add(current[i])
+            }
+            next
+        }
+        if (isLogVisible) {
+            binding.recyclerLog.post { binding.recyclerLog.smoothScrollToPosition(0) }
+        }
+        schedulePersistLog()
+    }
+
+    private fun addDebugLog(tag: String, message: String) {
+        val item = ScanLogItem(
+            id = 0L,
+            timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()),
+            mode = ScanMode.KEYBOARD,
+            value = tag,
+            status = LogStatus.LOCAL_ONLY,
+            detail = message
+        )
+        runOnUiThread { addLogAndRefresh(item) }
     }
 
     private fun loadLogs() {
         logListFlow.value = logRepository.getLogs()
     }
 
-    private fun addPendingScan(rawValue: String, mode: ScanMode) {
-        val parts = splitCombinedScanValues(rawValue)
-        if (parts.isEmpty()) return
-        val now = Date()
-        val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-        val ts = formatter.format(now)
-
-        pendingScans.update { list ->
-            var acc = list
-            for (value in parts.asReversed()) {
-                val i = acc.indexOfFirst {
-                    it.value == value && it.mode == mode && it.stockOpMode == currentStockMode &&
-                        it.state == PendingScanState.PENDING
-                }
-                acc = if (i >= 0) {
-                    acc.toMutableList().apply {
-                        val row = this[i]
-                        this[i] = row.copy(scanCount = row.scanCount + 1, createdAt = ts)
-                    }
-                } else {
-                    listOf(
-                        PendingScanRow(
-                            createdAt = ts,
-                            value = value,
-                            mode = mode,
-                            stockOpMode = currentStockMode,
-                            state = PendingScanState.PENDING,
-                            scanCount = 1
-                        )
-                    ) + acc
-                }
+    private fun schedulePersistLog() {
+        persistRunnable?.let { persistHandler.removeCallbacks(it) }
+        persistRunnable = Runnable {
+            persistRunnable = null
+            val snapshot = logListFlow.value
+            lifecycleScope.launch(Dispatchers.IO) {
+                logRepository.saveAll(snapshot)
             }
-            acc
         }
-
-        val last = parts.last()
-        lastScanValue = last
-        binding.textLastScan.text = getString(R.string.scan_last, last)
-        if (mode == ScanMode.KEYBOARD) {
-            binding.editBarcode.setText("")
-        } else {
-            binding.editBarcode.setText(last)
-        }
-        binding.recyclerPending.post { binding.recyclerPending.smoothScrollToPosition(0) }
-        scheduleDebouncedAutoSend()
+        persistHandler.postDelayed(persistRunnable!!, LOG_PERSIST_DEBOUNCE_MS)
     }
 
-    private fun scheduleDebouncedAutoSend() {
-        if (!prefs.autoSendScans) return
-        if (currentStockMode == StockOpMode.OPNAME) return
-        autoSendRunnable?.let { autoSendHandler.removeCallbacks(it) }
-        autoSendRunnable = Runnable {
-            lifecycleScope.launch {
-                val rows = pendingScans.value.filter {
-                    it.state == PendingScanState.PENDING && it.stockOpMode != StockOpMode.OPNAME
-                }
-                if (rows.isEmpty()) return@launch
-                val (_, fail) = uploadPendingRows(rows)
-                runOnUiThread {
-                    if (fail > 0) {
-                        SoundHelper.playError()
-                        Snackbar.make(
-                            binding.root,
-                            getString(R.string.auto_send_has_failures),
-                            Snackbar.LENGTH_LONG
-                        ).show()
-                    }
-                }
-            }
-        }
-        autoSendHandler.postDelayed(autoSendRunnable!!, 450L)
-    }
-
-    private fun syncRfidNamesFromMenu() {
-        lifecycleScope.launch {
-            val result = RfidMapSync.sync(prefs)
-            runOnUiThread {
-                result.fold(
-                    onSuccess = { n ->
-                        RfidNameCache.refreshFromPrefs(prefs)
-                        pendingAdapter.notifyDataSetChanged()
-                        Snackbar.make(
-                            binding.root,
-                            getString(R.string.sync_rfid_names_ok, n),
-                            Snackbar.LENGTH_SHORT
-                        ).show()
-                    },
-                    onFailure = { e ->
-                        Snackbar.make(
-                            binding.root,
-                            getString(R.string.sync_rfid_names_fail, e.message ?: "Error"),
-                            Snackbar.LENGTH_LONG
-                        ).show()
-                    }
-                )
-            }
+    private fun flushPersistNow() {
+        persistRunnable?.let { persistHandler.removeCallbacks(it) }
+        persistRunnable = null
+        val snapshot = logListFlow.value
+        // Sinkron pada thread saat ini agar selesai sebelum onPause/onDestroy beneran return.
+        try {
+            logRepository.saveAll(snapshot)
+        } catch (_: Exception) {
         }
     }
 
@@ -522,21 +470,18 @@ class MainActivity : AppCompatActivity() {
         val trimmed = raw.trim()
         if (trimmed.isEmpty()) return emptyList()
 
-        // Prioritas delimiter umum dari scanner/wedge.
         val byDelimiter = trimmed
             .split(Regex("[\\r\\n,;\\t ]+"))
             .map { it.trim() }
             .filter { it.isNotEmpty() }
         if (byDelimiter.size > 1) return byDelimiter
 
-        // Fallback: beberapa scanner kirim EPC hex beruntun tanpa delimiter (umum 24-char EPC).
         val compactHex = trimmed.uppercase(Locale.ROOT)
         val isHex = compactHex.matches(Regex("[0-9A-F]+"))
         if (isHex && compactHex.length >= 48 && compactHex.length % 24 == 0) {
             return compactHex.chunked(24)
         }
 
-        // Fallback lain: split saat prefix EPC mulai lagi (E + 3 hex).
         val byPrefix = compactHex
             .split(Regex("(?=E[0-9A-F]{3})"))
             .map { it.trim() }
@@ -546,183 +491,18 @@ class MainActivity : AppCompatActivity() {
         return listOf(trimmed)
     }
 
-    private fun updatePendingRow(localId: String, transform: (PendingScanRow) -> PendingScanRow) {
-        pendingScans.update { list -> list.map { if (it.localId == localId) transform(it) else it } }
-    }
-
-    private fun clearPendingQueue() {
-        pendingScans.value = emptyList()
-    }
-
-    private fun sendPendingBatch() {
-        val toSend = pendingScans.value.filter {
-            it.state == PendingScanState.PENDING && it.stockOpMode != StockOpMode.OPNAME
-        }
-        if (toSend.isEmpty()) {
-            Snackbar.make(binding.root, getString(R.string.nothing_to_send_non_opname), Snackbar.LENGTH_SHORT).show()
-            return
-        }
-        binding.btnSendScans.isEnabled = false
-        setApiLoading(true)
-        lifecycleScope.launch {
-            val (ok, fail) = uploadPendingRows(toSend)
-            runOnUiThread {
-                binding.btnSendScans.isEnabled = true
-                setApiLoading(false)
-                Snackbar.make(
-                    binding.root,
-                    getString(R.string.batch_send_done, ok, fail),
-                    Snackbar.LENGTH_LONG
-                ).show()
-                if (fail > 0) SoundHelper.playError()
-            }
-        }
-    }
-
-    /** @return Pair(jumlah baris sukses, jumlah baris gagal) */
-    private suspend fun uploadPendingRows(rows: List<PendingScanRow>): Pair<Int, Int> {
-        var ok = 0
-        var fail = 0
-        for (row in rows) {
-            updatePendingRow(row.localId) { it.copy(state = PendingScanState.SENDING) }
-            val apiSource = when (row.mode) {
-                ScanMode.KEYBOARD -> "barcode"
-                ScanMode.RFID -> "rfid"
-            }
-            var lastMsg: String? = null
-            var failed = false
-            for (_attempt in 1..row.scanCount) {
-                val result = ScanUpload.upload(
-                    prefs = prefs,
-                    value = row.value,
-                    apiSource = apiSource,
-                    stockOpMode = row.stockOpMode
-                )
-                result.fold(
-                    onSuccess = { msg -> lastMsg = msg },
-                    onFailure = { e ->
-                        failed = true
-                        updatePendingRow(row.localId) {
-                            it.copy(
-                                state = PendingScanState.FAILED,
-                                serverMessage = e.message,
-                                scanCount = row.scanCount
-                            )
-                        }
-                    }
-                )
-                if (failed) break
-            }
-            if (!failed) {
-                ok++
-                updatePendingRow(row.localId) {
-                    it.copy(
-                        state = PendingScanState.SENT,
-                        serverMessage = lastMsg,
-                        scanCount = 1
-                    )
-                }
-            } else {
-                fail++
-            }
-        }
-        return ok to fail
-    }
-
-    private fun runOpnameCompare() {
-        val scanned = pendingScans.value
-            .filter { it.stockOpMode == StockOpMode.OPNAME }
-            .map { it.value }
-            .distinct()
-        if (scanned.isEmpty()) {
-            Snackbar.make(binding.root, getString(R.string.opname_compare_need_data), Snackbar.LENGTH_SHORT).show()
-            return
-        }
-        setApiLoading(true)
-        lifecycleScope.launch {
-            val result = OpnameCompareApi.compare(prefs, scanned)
-            runOnUiThread {
-                setApiLoading(false)
-                result.fold(
-                    onSuccess = { cmp ->
-                        showOpnameCompareDialog(cmp)
-                    },
-                    onFailure = { e ->
-                        SoundHelper.playError()
-                        Snackbar.make(
-                            binding.root,
-                            "Compare opname gagal: ${e.message ?: "Error"}",
-                            Snackbar.LENGTH_LONG
-                        ).show()
-                    }
-                )
-            }
-        }
-    }
-
-    private fun showOpnameCompareDialog(cmp: com.stok.middleware.network.OpnameCompareResult) {
-        val missingWebPreview = cmp.missingOnWeb.take(20).joinToString("\n")
-        val missingScanPreview = cmp.missingInScan.take(20).joinToString("\n")
-        val text = buildString {
-            append(getString(R.string.opname_compare_done))
-            append("\n\n")
-            append("Match: ${cmp.matched.size}\n")
-            append("Scan tidak ada di web: ${cmp.missingOnWeb.size}\n")
-            append("Ada di web tapi tidak discan: ${cmp.missingInScan.size}\n")
-            if (!cmp.message.isNullOrBlank()) append("\nPesan server: ${cmp.message}\n")
-            if (cmp.missingOnWeb.isNotEmpty()) {
-                append("\n-- Scan tidak ada di web --\n")
-                append(missingWebPreview)
-                if (cmp.missingOnWeb.size > 20) append("\n... +${cmp.missingOnWeb.size - 20} lagi")
-            }
-            if (cmp.missingInScan.isNotEmpty()) {
-                append("\n\n-- Ada di web tapi tidak discan --\n")
-                append(missingScanPreview)
-                if (cmp.missingInScan.size > 20) append("\n... +${cmp.missingInScan.size - 20} lagi")
-            }
-        }
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.mode_opname))
-            .setMessage(text)
-            .setPositiveButton(android.R.string.ok, null)
-            .show()
-    }
-
     private fun clearAll() {
-        binding.editBarcode.setText("")
-        clearLastScanValue()
+        clearPending()
         logRepository.clearLogs()
         loadLogs()
-        barcodeHandler.clear()
-        clearWedgeBuffer()
-        clearPendingQueue()
-    }
-
-    private fun copyLastScanValue() {
-        if (lastScanValue.isEmpty()) {
-            Snackbar.make(binding.root, getString(R.string.scan_empty), Snackbar.LENGTH_SHORT).show()
-            return
-        }
-        copyToClipboard(lastScanValue)
-    }
-
-    private fun clearLastScanValue() {
-        lastScanValue = ""
-        binding.textLastScan.text = getString(R.string.scan_last_empty)
+        cancelWedgeDebounce()
+        wedgeBuffer.clear()
     }
 
     private fun copyToClipboard(text: String) {
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("Scan log", text))
         Snackbar.make(binding.root, getString(R.string.log_copied), Snackbar.LENGTH_SHORT).show()
-    }
-
-    private fun getAppVersionName(): String {
-        return try {
-            packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0"
-        } catch (_: Exception) {
-            "1.0"
-        }
     }
 
     private fun buildFullLogText(): String? {
@@ -740,70 +520,9 @@ class MainActivity : AppCompatActivity() {
         copyToClipboard(text)
     }
 
-    private fun setApiLoading(show: Boolean) {
-        // Section status dihapus sesuai kebutuhan UI.
-    }
-
-    private fun sendFullLog() {
-        val text = buildFullLogText()
-        if (text == null) {
-            Snackbar.make(binding.root, getString(R.string.log_empty), Snackbar.LENGTH_SHORT).show()
-            return
-        }
-        setApiLoading(true)
-        lifecycleScope.launch {
-            try {
-                val service = ApiConfig.createRfidApiService(prefs)
-                val url = ApiConfig.getLogSaveUrl(prefs)
-                val httpResp = service.sendLog(url, LogExportPayload(log = text))
-                val parseResult = com.stok.middleware.network.ApiResponseParser.parseLogSendResponse(httpResp)
-                runOnUiThread {
-                    setApiLoading(false)
-                    val parsed = parseResult.getOrElse { e ->
-                        SoundHelper.playError()
-                        val msg = e.message ?: "Error"
-                        Snackbar.make(binding.root, getString(R.string.log_send_failed, msg), Snackbar.LENGTH_LONG).show()
-                        addLogAndRefresh(scanLogEntryForSendLogFailure(msg))
-                        return@runOnUiThread
-                    }
-                    if (parsed.success == true) {
-                        Snackbar.make(binding.root, getString(R.string.log_sent), Snackbar.LENGTH_SHORT).show()
-                    } else {
-                        SoundHelper.playError()
-                        val msg = parsed.message ?: "Unknown"
-                        Snackbar.make(binding.root, getString(R.string.log_send_failed, msg), Snackbar.LENGTH_LONG).show()
-                        addLogAndRefresh(scanLogEntryForSendLogFailure(msg))
-                    }
-                }
-            } catch (e: Exception) {
-                val detail = when (e) {
-                    is HttpException -> {
-                        val code = e.code()
-                        val body = e.response()?.errorBody()?.string()?.take(500) ?: ""
-                        "HTTP $code" + if (body.isNotBlank()) " — $body" else ""
-                    }
-                    else -> e.message ?: "Error"
-                }
-                runOnUiThread {
-                    setApiLoading(false)
-                    SoundHelper.playError()
-                    Snackbar.make(binding.root, getString(R.string.log_send_failed, detail), Snackbar.LENGTH_LONG).show()
-                    addLogAndRefresh(scanLogEntryForSendLogFailure(detail))
-                }
-            }
-        }
-    }
-
-    private fun scanLogEntryForSendLogFailure(detail: String): ScanLogItem {
-        val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
-        return ScanLogItem(
-            id = 0L,
-            timestamp = timestamp,
-            mode = ScanMode.KEYBOARD,
-            value = "Kirim log",
-            status = LogStatus.FAILED,
-            detail = detail
-        )
+    private fun hideAllSoftKeyboards() {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager ?: return
+        binding.root.windowToken?.let { imm.hideSoftInputFromWindow(it, 0) }
     }
 
     private fun getSettingsPassword(): String {
@@ -839,28 +558,5 @@ class MainActivity : AppCompatActivity() {
             .setNegativeButton(R.string.settings_password_cancel, null)
             .setCancelable(true)
             .show()
-    }
-
-    private fun logRfidPermissionAndConfig() {
-        try {
-            val pm = packageManager
-            val pkg = packageName
-            val internet = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                pm.checkPermission(android.Manifest.permission.INTERNET, pkg) == PackageManager.PERMISSION_GRANTED
-            } else {
-                @Suppress("DEPRECATION")
-                pm.checkPermission(android.Manifest.permission.INTERNET, pkg) == PackageManager.PERMISSION_GRANTED
-            }
-            val networkState = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                pm.checkPermission(android.Manifest.permission.ACCESS_NETWORK_STATE, pkg) == PackageManager.PERMISSION_GRANTED
-            } else {
-                @Suppress("DEPRECATION")
-                pm.checkPermission(android.Manifest.permission.ACCESS_NETWORK_STATE, pkg) == PackageManager.PERMISSION_GRANTED
-            }
-            val msg = "INTERNET=$internet, ACCESS_NETWORK_STATE=$networkState (untuk API setelah scan)"
-            ScreenLog.d("[permission]", msg)
-        } catch (e: Exception) {
-            ScreenLog.e("[permission]", "check EXCEPTION", e)
-        }
     }
 }

@@ -4,16 +4,15 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.snackbar.Snackbar
 import androidx.lifecycle.lifecycleScope
+import com.stok.middleware.R
 import com.stok.middleware.data.local.AppPreferences
 import com.stok.middleware.data.local.ScanLogRepository
 import com.stok.middleware.data.model.LogStatus
 import com.stok.middleware.data.model.ScanLogItem
 import com.stok.middleware.data.model.ScanMode
 import com.stok.middleware.databinding.ActivitySettingsBinding
-import com.stok.middleware.network.ApiConfig
-import kotlinx.coroutines.Dispatchers
+import com.stok.middleware.network.SheetsApi
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -33,13 +32,10 @@ class SettingsActivity : AppCompatActivity() {
         prefs = app.appPreferences
         logRepository = ScanLogRepository(this)
 
-        binding.editBaseUrl.setText(prefs.baseUrl)
-        binding.editEndpointPath.setText(prefs.endpointPath)
-        binding.editOpnameComparePath.setText(prefs.opnameComparePath)
-        binding.editStaticToken.setText(prefs.staticToken)
+        binding.editSheetsUrl.setText(prefs.sheetsUrl)
+        binding.editSheetsToken.setText(prefs.sheetsToken)
         binding.editRfidIntentAction.setText(prefs.rfidIntentAction)
         binding.editRfidExtraKey.setText(prefs.rfidExtraKey)
-        binding.switchAutoSend.isChecked = prefs.autoSendScans
         binding.switchWedgeAsRfid.isChecked = prefs.wedgeAsRfid
 
         binding.btnSave.setOnClickListener { save() }
@@ -47,53 +43,62 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun testConnection() {
+        val url = binding.editSheetsUrl.text.toString().trim()
+        val token = binding.editSheetsToken.text.toString().trim()
+        if (url.isBlank() || token.isBlank()) {
+            Snackbar.make(binding.root, getString(R.string.test_connection_need_url_token), Snackbar.LENGTH_LONG).show()
+            return
+        }
         binding.btnTestConnection.isEnabled = false
         binding.progressConnection.visibility = android.view.View.VISIBLE
-        binding.btnTestConnection.text = getString(com.stok.middleware.R.string.test_connection_running)
-        Snackbar.make(binding.root, getString(com.stok.middleware.R.string.test_connection_running), Snackbar.LENGTH_SHORT).show()
+        binding.btnTestConnection.text = getString(R.string.test_connection_running)
         lifecycleScope.launch {
-            val baseUrl = binding.editBaseUrl.text.toString().trim()
-            val token = binding.editStaticToken.text.toString().trim()
-            val error = withContext(Dispatchers.IO) {
-                ApiConfig.testConnection(baseUrl, token)
-            }
+            val result = SheetsApi.ping(url, token)
             binding.btnTestConnection.isEnabled = true
             binding.progressConnection.visibility = android.view.View.GONE
-            binding.btnTestConnection.text = getString(com.stok.middleware.R.string.btn_test_connection)
+            binding.btnTestConnection.text = getString(R.string.btn_test_connection)
             val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
-            val detail = if (error == null) "Koneksi berhasil" else "Gagal: $error"
-            logRepository.addLog(
-                ScanLogItem(
-                    id = 0L,
-                    timestamp = timestamp,
-                    mode = ScanMode.KEYBOARD,
-                    value = "Test API",
-                    status = LogStatus.LOCAL_ONLY,
-                    detail = detail
-                )
+            result.fold(
+                onSuccess = {
+                    logRepository.addLog(
+                        ScanLogItem(
+                            id = 0L,
+                            timestamp = timestamp,
+                            mode = ScanMode.KEYBOARD,
+                            value = "Test Sheets",
+                            status = LogStatus.LOCAL_ONLY,
+                            detail = "OK"
+                        )
+                    )
+                    Snackbar.make(binding.root, getString(R.string.test_connection_ok), Snackbar.LENGTH_LONG).show()
+                },
+                onFailure = { e ->
+                    val msg = e.message ?: "Error"
+                    logRepository.addLog(
+                        ScanLogItem(
+                            id = 0L,
+                            timestamp = timestamp,
+                            mode = ScanMode.KEYBOARD,
+                            value = "Test Sheets",
+                            status = LogStatus.FAILED,
+                            detail = msg
+                        )
+                    )
+                    Snackbar.make(binding.root, getString(R.string.test_connection_fail, msg), Snackbar.LENGTH_LONG).show()
+                }
             )
-            if (error == null) {
-                Snackbar.make(binding.root, getString(com.stok.middleware.R.string.test_connection_ok), Snackbar.LENGTH_LONG).show()
-            } else {
-                Snackbar.make(binding.root, getString(com.stok.middleware.R.string.test_connection_fail, error), Snackbar.LENGTH_LONG).show()
-            }
         }
     }
 
     private fun save() {
-        prefs.baseUrl = binding.editBaseUrl.text.toString().trim()
-        prefs.endpointPath = binding.editEndpointPath.text.toString().trim()
-        prefs.opnameComparePath = binding.editOpnameComparePath.text.toString().trim().ifBlank {
-            AppPreferences.DEFAULT_OPNAME_COMPARE_PATH
-        }
-        prefs.staticToken = binding.editStaticToken.text.toString().trim()
+        prefs.sheetsUrl = binding.editSheetsUrl.text.toString().trim()
+        prefs.sheetsToken = binding.editSheetsToken.text.toString().trim()
         prefs.rfidIntentAction = binding.editRfidIntentAction.text.toString().trim().ifBlank {
             AppPreferences.DEFAULT_RFID_ACTION
         }
         prefs.rfidExtraKey = binding.editRfidExtraKey.text.toString().trim().ifBlank {
             AppPreferences.DEFAULT_RFID_EXTRA_KEY
         }
-        prefs.autoSendScans = binding.switchAutoSend.isChecked
         prefs.wedgeAsRfid = binding.switchWedgeAsRfid.isChecked
         finish()
     }
